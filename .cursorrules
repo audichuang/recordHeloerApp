@@ -1,0 +1,156 @@
+# 錄音分析助手 - 專案規則
+
+## 專案概述
+這是一個完整的錄音分析應用程式，包含iOS前端和FastAPI後端，主要功能是讓用戶上傳錄音文件，並提供逐字稿轉換和智能摘要服務。
+
+## 專案結構
+
+### 前端 - iOS SwiftUI 應用 (recordHeloerApp/)
+- **位置**: `recordHeloerApp/RecordAnalyzer/`
+- **框架**: SwiftUI + Swift 6.0
+- **目標平台**: iOS 18.0+
+- **Bundle ID**: com.recordanalyzer.app
+
+#### 主要功能模組：
+1. **用戶認證系統**
+   - 註冊新用戶
+   - 用戶登入/登出
+   - 測試帳戶：test@example.com / password
+
+2. **錄音處理**
+   - 錄音上傳
+   - 語音轉文字（逐字稿）
+   - AI 摘要生成
+   - 上傳進度顯示
+
+3. **歷史紀錄**
+   - 查看過往錄音
+   - 瀏覽逐字稿和摘要
+   - 錄音管理功能
+
+4. **用戶資料管理**
+   - 個人資料設定
+   - 偏好設定
+
+#### 技術架構：
+- **狀態管理**: @StateObject, @ObservableObject
+- **數據持久化**: UserDefaults + Codable
+- **網路請求**: 指向 localhost:5000/api
+- **UI框架**: SwiftUI with 中文介面
+- **權限**: 麥克風使用權限、語音識別權限
+
+### 後端 - FastAPI 應用 (recordhelper/)
+- **位置**: `recordhelper/`
+- **框架**: FastAPI + Python
+- **狀態**: 已開發完成
+- **API端點**: http://localhost:5000/api
+
+#### 主要API端點：
+1. **認證 API** (`/api/auth`)
+   - POST `/api/auth/register` - 用戶註冊
+   - POST `/api/auth/login` - 用戶登入
+   - POST `/api/auth/logout` - 用戶登出
+   - GET `/api/auth/me` - 獲取當前用戶信息
+
+2. **用戶管理 API** (`/api/users`)
+   - GET `/api/users/profile` - 獲取用戶資料
+   - PUT `/api/users/profile` - 更新用戶資料
+   - DELETE `/api/users/profile` - 刪除用戶帳號
+
+3. **錄音處理 API** (`/api/recordings`)
+   - POST `/api/recordings/upload` - 上傳錄音文件
+   - GET `/api/recordings` - 獲取錄音清單
+   - GET `/api/recordings/{id}` - 獲取特定錄音詳情
+   - DELETE `/api/recordings/{id}` - 刪除錄音
+   - GET `/api/recordings/{id}/download` - 下載錄音文件
+
+4. **分析服務 API** (`/api/analysis`)
+   - POST `/api/analysis/transcribe` - 語音轉文字
+   - POST `/api/analysis/summarize` - 生成摘要
+   - GET `/api/analysis/status/{task_id}` - 查詢處理狀態
+
+5. **系統狀態 API** (`/api/system`)
+   - GET `/api/system/status` - 系統健康狀態
+   - GET `/api/system/info` - 系統信息
+
+## 開發重點
+
+### 當前狀態：
+- ✅ iOS 前端基本架構完成
+- ✅ SwiftUI 界面設計完成
+- ✅ 後端 FastAPI 服務完成
+- ✅ 應用可在模擬器中正常啟動
+
+### 常見任務：
+1. **前端開發**：
+   - 使用 SwiftUI 和 Swift 6.0 語法
+   - 遵循 MVVM 架構模式
+   - 使用 @MainActor 確保 UI 更新安全
+   - 採用 中文繁體 作為界面語言
+
+2. **API 整合**：
+   - 前端請求指向 `http://localhost:5000/api`
+   - 使用 async/await 處理網路請求
+   - 實作適當的錯誤處理和載入狀態
+
+3. **數據模型**：
+   - User: 用戶資訊（username, email, createdAt）
+   - Recording: 錄音記錄（title, fileName, duration, transcription, summary, fileURL）
+   - 所有模型都實作 Codable 協議
+
+4. **權限管理**：
+   - NSMicrophoneUsageDescription: 語音錄製功能
+   - NSSpeechRecognitionUsageDescription: 語音識別分析
+
+## 開發指南
+
+### iOS 開發約定：
+- 使用 Swift 6.0 新特性（actor, @MainActor）
+- 採用 SwiftUI 聲明式 UI
+- 檔案命名使用 PascalCase
+- 變數命名使用 camelCase
+- 中文註解和用戶界面文字
+
+### 編碼風格：
+- 優先使用 async/await 而非 completion handlers
+- 使用 @Published 屬性進行狀態管理
+- 適當的錯誤處理和用戶反饋
+- 遵循 iOS Human Interface Guidelines
+
+### 測試和部署：
+- 目標模擬器：iPhone 16 (iOS 18.4)
+- 開發環境：Xcode 16.0+
+- 構建命令：`xcodebuild -project RecordAnalyzerApp.xcodeproj -scheme RecordAnalyzer`
+
+## 快速啟動指南
+
+### 啟動後端服務：
+```bash
+cd recordhelper
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+python run_fastapi.py
+```
+後端服務將在 http://localhost:5000 啟動
+
+### 啟動iOS前端：
+```bash
+cd recordHeloerApp
+open -a Simulator
+xcodebuild -project RecordAnalyzerApp.xcodeproj -scheme RecordAnalyzer -destination 'platform=iOS Simulator,id=FFFEB239-C2D3-40D4-A78A-AEF52AB0CEF0' build
+xcrun simctl install booted /path/to/built/app
+xcrun simctl launch booted com.recordanalyzer.app
+```
+
+### 或者使用Xcode：
+1. 打開 `recordHeloerApp/RecordAnalyzerApp.xcodeproj`
+2. 選擇 iPhone 模擬器作為目標
+3. 按 Cmd+R 運行
+
+## 注意事項
+- 前端目前使用模擬數據，需要整合真實 API
+- 後端已完成，前端需要連接實際的網路請求
+- 確保在開發時同時啟動後端服務和 iOS 模擬器
+- 所有用戶界面文字使用繁體中文
+- API文檔可在 http://localhost:5000/docs 查看 

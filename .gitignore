@@ -1,0 +1,96 @@
+# Xcode
+#
+# Created by https://www.toptal.com/developers/gitignore/api/xcode,macos,swift
+# Edit at https://www.toptal.com/developers/gitignore?templates=xcode,macos,swift
+
+### macOS ###
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon?
+Icon
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.Spotlight-V100
+.Trashes
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+### Swift ###
+# Standard Swift project build artifacts
+.build/
+
+# Package Manager
+Packages/
+.swiftpm/
+
+# XCTest products
+*.xctest/
+
+# Swift Playgrounds
+*.playground
+*.xcplayground
+
+# Swift Package Manager
+#
+# Add this line if you want to ignore the dependenciesSwift.derived
+# Package.resolved
+
+### Xcode ###
+# Xcode Caches
+xcuserdata/
+DerivedData/
+
+# Xcode Project Files
+*.xcscheme
+*.xcodeproj/project.xcworkspace
+*.xcodeproj/xcuserdata
+
+# Xcode Build Artifacts
+build/
+*.ipa
+*.dSYM/
+
+# Swift Package Manager Caches
+.swiftpm/
+
+# Other
+*.moved-aside
+*.hmap
+*.ipa.dSYM
+*.xcarchive
+
+# Pods - If you are using CocoaPods
+# Pods/
+# Podfile.lock
+
+# Carthage - If you are using Carthage
+# Carthage/
+
+# Sparkle
+*.pem
+
+# fastlane
+#
+# It is recommended to not store the screenshots in the git repo.
+# Instead, use fastlane to re-generate the screenshots whenever they are needed.
+# For more information about the recommended setup visit:
+# https://docs.fastlane.tools/best-practices/source-control/
+
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# Bundle artifact
+*.bundle 

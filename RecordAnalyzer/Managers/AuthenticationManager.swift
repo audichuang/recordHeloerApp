@@ -1,88 +1,125 @@
 import Foundation
 import SwiftUI
 
+// Swift 6.0 升級：使用 @MainActor 確保UI更新安全
+@MainActor
 class AuthenticationManager: ObservableObject {
     @Published var isAuthenticated = false
     @Published var currentUser: User?
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    private let baseURL = "http://localhost:5000/api"
+    private let networkService = NetworkService.shared
+    
+    // Swift 6.0 升級：使用 actor 來處理數據存儲
+    private let dataStore = AuthDataStore()
     
     init() {
-        // 檢查是否有保存的登入狀態
-        checkSavedAuthState()
+        Task {
+            await checkSavedAuthState()
+        }
     }
     
     func register(username: String, email: String, password: String) async {
-        await MainActor.run {
-            isLoading = true
-            errorMessage = nil
-        }
+        isLoading = true
+        errorMessage = nil
         
-        // 模擬API調用
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
-        
-        await MainActor.run {
-            // 假資料註冊成功
-            let newUser = User(username: username, email: email, createdAt: Date())
-            self.currentUser = newUser
+        do {
+            // 調用真實API
+            let user = try await networkService.register(
+                username: username,
+                email: email,
+                password: password
+            )
+            
+            self.currentUser = user
             self.isAuthenticated = true
             self.isLoading = false
             
             // 保存認證狀態
-            saveAuthState()
+            await dataStore.saveUser(user)
+        } catch {
+            self.errorMessage = "註冊失敗：\(error.localizedDescription)"
+            self.isLoading = false
         }
     }
     
     func login(email: String, password: String) async {
-        await MainActor.run {
-            isLoading = true
-            errorMessage = nil
-        }
+        isLoading = true
+        errorMessage = nil
         
-        // 模擬API調用
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
-        
-        await MainActor.run {
-            // 假資料登入成功
-            if email == "test@example.com" && password == "password" {
-                let user = User(username: "測試用戶", email: email, createdAt: Date())
-                self.currentUser = user
-                self.isAuthenticated = true
-                
-                // 保存認證狀態
-                saveAuthState()
-            } else {
-                self.errorMessage = "電子郵件或密碼錯誤"
-            }
+        do {
+            // 調用真實API
+            let user = try await networkService.login(email: email, password: password)
             
+            self.currentUser = user
+            self.isAuthenticated = true
+            self.isLoading = false
+            
+            // 保存認證狀態
+            await dataStore.saveUser(user)
+        } catch {
+            self.errorMessage = "登入失敗：\(error.localizedDescription)"
             self.isLoading = false
         }
     }
     
     func logout() {
-        currentUser = nil
-        isAuthenticated = false
-        clearAuthState()
-    }
-    
-    private func checkSavedAuthState() {
-        if let userData = UserDefaults.standard.data(forKey: "savedUser"),
-           let user = try? JSONDecoder().decode(User.self, from: userData) {
-            currentUser = user
-            isAuthenticated = true
+        Task {
+            do {
+                // 調用真實API登出
+                try await networkService.logout()
+            } catch {
+                print("登出API調用失敗: \(error)")
+                // 即使API失敗，也要清除本地狀態
+            }
+            
+            currentUser = nil
+            isAuthenticated = false
+            await dataStore.clearUser()
         }
     }
     
-    private func saveAuthState() {
-        if let user = currentUser,
-           let userData = try? JSONEncoder().encode(user) {
-            UserDefaults.standard.set(userData, forKey: "savedUser")
+    private func checkSavedAuthState() async {
+        if let user = await dataStore.loadUser() {
+            // 檢查token是否仍然有效
+            do {
+                let currentUser = try await networkService.getCurrentUser()
+                self.currentUser = currentUser
+                self.isAuthenticated = true
+                
+                // 更新本地保存的用戶信息
+                await dataStore.saveUser(currentUser)
+            } catch {
+                // Token無效，清除本地狀態
+                await dataStore.clearUser()
+                self.currentUser = nil
+                self.isAuthenticated = false
+                print("Token無效，已清除登入狀態: \(error)")
+            }
+        }
+    }
+}
+
+// Swift 6.0 新功能：使用 actor 確保數據安全
+actor AuthDataStore {
+    private let userKey = "savedUser"
+    
+    func saveUser(_ user: User) {
+        if let userData = try? JSONEncoder().encode(user) {
+            UserDefaults.standard.set(userData, forKey: userKey)
         }
     }
     
-    private func clearAuthState() {
-        UserDefaults.standard.removeObject(forKey: "savedUser")
+    func loadUser() -> User? {
+        guard let userData = UserDefaults.standard.data(forKey: userKey),
+              let user = try? JSONDecoder().decode(User.self, from: userData) else {
+            return nil
+        }
+        return user
+    }
+    
+    func clearUser() {
+        UserDefaults.standard.removeObject(forKey: userKey)
     }
 } 

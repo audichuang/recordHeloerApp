@@ -73,8 +73,8 @@ struct RecordingDetailView: View {
                         .fontWeight(selectedTab == 0 ? .bold : .medium)
                     
                     Rectangle()
-                        .height(3)
-                        .foregroundColor(selectedTab == 0 ? .blue : .clear)
+                        .frame(height: 3)
+                        .foregroundColor(selectedTab == 0 ? Color.blue : Color.clear)
                 }
             }
             .foregroundColor(selectedTab == 0 ? .blue : .secondary)
@@ -87,8 +87,8 @@ struct RecordingDetailView: View {
                         .fontWeight(selectedTab == 1 ? .bold : .medium)
                     
                     Rectangle()
-                        .height(3)
-                        .foregroundColor(selectedTab == 1 ? .blue : .clear)
+                        .frame(height: 3)
+                        .foregroundColor(selectedTab == 1 ? Color.blue : Color.clear)
                 }
             }
             .foregroundColor(selectedTab == 1 ? .blue : .secondary)

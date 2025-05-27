@@ -7,13 +7,14 @@ struct LoginView: View {
     @State private var showingRegister = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 30) {
                 // Logo 區域
                 VStack(spacing: 16) {
                     Image(systemName: "waveform.circle.fill")
                         .font(.system(size: 80))
                         .foregroundColor(.blue)
+                        .symbolEffect(.bounce, value: authManager.isLoading)
                     
                     Text("錄音分析助手")
                         .font(.title)
@@ -34,9 +35,10 @@ struct LoginView: View {
                             .foregroundColor(.primary)
                         
                         TextField("請輸入電子郵件", text: $email)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .textFieldStyle(.roundedBorder)
                             .keyboardType(.emailAddress)
-                            .autocapitalization(.none)
+                            .textInputAutocapitalization(.never)
+                            .textContentType(.emailAddress)
                     }
                     
                     VStack(alignment: .leading, spacing: 8) {
@@ -45,13 +47,15 @@ struct LoginView: View {
                             .foregroundColor(.primary)
                         
                         SecureField("請輸入密碼", text: $password)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .textFieldStyle(.roundedBorder)
+                            .textContentType(.password)
                     }
                     
                     if let errorMessage = authManager.errorMessage {
                         Text(errorMessage)
                             .foregroundColor(.red)
                             .font(.caption)
+                            .transition(.scale.combined(with: .opacity))
                     }
                     
                     Button(action: {
@@ -63,6 +67,7 @@ struct LoginView: View {
                             if authManager.isLoading {
                                 ProgressView()
                                     .scaleEffect(0.8)
+                                    .tint(.white)
                             }
                             Text("登入")
                                 .fontWeight(.semibold)
@@ -70,10 +75,12 @@ struct LoginView: View {
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .shadow(color: .blue.opacity(0.3), radius: 5, x: 0, y: 2)
                     }
                     .disabled(authManager.isLoading || email.isEmpty || password.isEmpty)
+                    .animation(.easeInOut(duration: 0.2), value: authManager.isLoading)
                 }
                 .padding(.horizontal, 40)
                 
@@ -87,6 +94,7 @@ struct LoginView: View {
                     }
                     .foregroundColor(.blue)
                     .fontWeight(.medium)
+                    .buttonStyle(.borderless)
                 }
                 
                 Spacer()
@@ -104,11 +112,17 @@ struct LoginView: View {
                         .foregroundColor(.secondary)
                 }
                 .padding(.bottom, 30)
+                .padding()
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                .padding(.horizontal)
             }
-            .navigationBarHidden(true)
+            .navigationBarBackButtonHidden(true)
+            .toolbar(.hidden, for: .navigationBar)
         }
         .sheet(isPresented: $showingRegister) {
             RegisterView()
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
     }
 }

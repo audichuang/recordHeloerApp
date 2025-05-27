@@ -7,22 +7,44 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		CE1234567890ABCD /* RecordAnalyzerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE1234567890ABCE /* RecordAnalyzerApp.swift */; };
-		CE1234567890ABCF /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE1234567890ABD0 /* ContentView.swift */; };
-		CE1234567890ABD1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CE1234567890ABD2 /* Assets.xcassets */; };
-		CE1234567890ABD3 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CE1234567890ABD4 /* Preview Assets.xcassets */; };
+		8A816D102DE597ED00F22D75 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A816D0E2DE597ED00F22D75 /* NetworkService.swift */; };
+		CE01 /* RecordAnalyzerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE02 /* RecordAnalyzerApp.swift */; };
+		CE03 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE04 /* ContentView.swift */; };
+		CE05 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CE06 /* Assets.xcassets */; };
+		CE07 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CE08 /* Preview Assets.xcassets */; };
+		CE09 /* AuthenticationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE10 /* AuthenticationManager.swift */; };
+		CE11 /* RecordingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE12 /* RecordingManager.swift */; };
+		CE13 /* RecordingModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE14 /* RecordingModel.swift */; };
+		CE15 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE16 /* LoginView.swift */; };
+		CE17 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE18 /* RegisterView.swift */; };
+		CE19 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE20 /* HomeView.swift */; };
+		CE21 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE22 /* HistoryView.swift */; };
+		CE23 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE24 /* ProfileView.swift */; };
+		CE25 /* RecordingRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE26 /* RecordingRowView.swift */; };
+		CE27 /* RecordingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE28 /* RecordingDetailView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		CE1234567890ABCB /* RecordAnalyzer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RecordAnalyzer.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		CE1234567890ABCE /* RecordAnalyzerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordAnalyzerApp.swift; sourceTree = "<group>"; };
-		CE1234567890ABD0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		CE1234567890ABD2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		CE1234567890ABD4 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		8A816D0E2DE597ED00F22D75 /* NetworkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkService.swift; sourceTree = "<group>"; };
+		CE02 /* RecordAnalyzerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordAnalyzerApp.swift; sourceTree = "<group>"; };
+		CE04 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		CE06 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		CE08 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		CE10 /* AuthenticationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationManager.swift; sourceTree = "<group>"; };
+		CE12 /* RecordingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingManager.swift; sourceTree = "<group>"; };
+		CE14 /* RecordingModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingModel.swift; sourceTree = "<group>"; };
+		CE16 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		CE18 /* RegisterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterView.swift; sourceTree = "<group>"; };
+		CE20 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		CE22 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		CE24 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		CE26 /* RecordingRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingRowView.swift; sourceTree = "<group>"; };
+		CE28 /* RecordingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingDetailView.swift; sourceTree = "<group>"; };
+		CE29 /* RecordAnalyzer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RecordAnalyzer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		CE1234567890ABC8 /* Frameworks */ = {
+		CE30 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -32,51 +54,142 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		CE1234567890ABC2 = {
+		8A816D0F2DE597ED00F22D75 /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				CE1234567890ABCD /* RecordAnalyzer */,
-				CE1234567890ABCC /* Products */,
+				8A816D0E2DE597ED00F22D75 /* NetworkService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		CE31 = {
+			isa = PBXGroup;
+			children = (
+				CE32 /* RecordAnalyzer */,
+				CE33 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		CE1234567890ABCC /* Products */ = {
+		CE32 /* RecordAnalyzer */ = {
 			isa = PBXGroup;
 			children = (
-				CE1234567890ABCB /* RecordAnalyzer.app */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
-		CE1234567890ABCD /* RecordAnalyzer */ = {
-			isa = PBXGroup;
-			children = (
-				CE1234567890ABCE /* RecordAnalyzerApp.swift */,
-				CE1234567890ABD0 /* ContentView.swift */,
-				CE1234567890ABD2 /* Assets.xcassets */,
-				CE1234567890ABD5 /* Preview Content */,
+				8A816D0F2DE597ED00F22D75 /* Services */,
+				CE02 /* RecordAnalyzerApp.swift */,
+				CE04 /* ContentView.swift */,
+				CE34 /* Managers */,
+				CE35 /* Models */,
+				CE36 /* Views */,
+				CE06 /* Assets.xcassets */,
+				CE37 /* Preview Content */,
 			);
 			path = RecordAnalyzer;
 			sourceTree = "<group>";
 		};
-		CE1234567890ABD5 /* Preview Content */ = {
+		CE33 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				CE1234567890ABD4 /* Preview Assets.xcassets */,
+				CE29 /* RecordAnalyzer.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		CE34 /* Managers */ = {
+			isa = PBXGroup;
+			children = (
+				CE10 /* AuthenticationManager.swift */,
+				CE12 /* RecordingManager.swift */,
+			);
+			path = Managers;
+			sourceTree = "<group>";
+		};
+		CE35 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				CE14 /* RecordingModel.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		CE36 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				CE38 /* Authentication */,
+				CE39 /* Home */,
+				CE40 /* History */,
+				CE41 /* Profile */,
+				CE42 /* Components */,
+				CE43 /* Recording */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		CE37 /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				CE08 /* Preview Assets.xcassets */,
 			);
 			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		CE38 /* Authentication */ = {
+			isa = PBXGroup;
+			children = (
+				CE16 /* LoginView.swift */,
+				CE18 /* RegisterView.swift */,
+			);
+			path = Authentication;
+			sourceTree = "<group>";
+		};
+		CE39 /* Home */ = {
+			isa = PBXGroup;
+			children = (
+				CE20 /* HomeView.swift */,
+			);
+			path = Home;
+			sourceTree = "<group>";
+		};
+		CE40 /* History */ = {
+			isa = PBXGroup;
+			children = (
+				CE22 /* HistoryView.swift */,
+			);
+			path = History;
+			sourceTree = "<group>";
+		};
+		CE41 /* Profile */ = {
+			isa = PBXGroup;
+			children = (
+				CE24 /* ProfileView.swift */,
+			);
+			path = Profile;
+			sourceTree = "<group>";
+		};
+		CE42 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				CE26 /* RecordingRowView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		CE43 /* Recording */ = {
+			isa = PBXGroup;
+			children = (
+				CE28 /* RecordingDetailView.swift */,
+			);
+			path = Recording;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		CE1234567890ABCA /* RecordAnalyzer */ = {
+		CE44 /* RecordAnalyzer */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = CE1234567890ABD8 /* Build configuration list for PBXNativeTarget "RecordAnalyzer" */;
+			buildConfigurationList = CE45 /* Build configuration list for PBXNativeTarget "RecordAnalyzer" */;
 			buildPhases = (
-				CE1234567890ABC7 /* Sources */,
-				CE1234567890ABC8 /* Frameworks */,
-				CE1234567890ABC9 /* Resources */,
+				CE46 /* Sources */,
+				CE30 /* Frameworks */,
+				CE47 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -84,25 +197,25 @@
 			);
 			name = RecordAnalyzer;
 			productName = RecordAnalyzer;
-			productReference = CE1234567890ABCB /* RecordAnalyzer.app */;
+			productReference = CE29 /* RecordAnalyzer.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		CE1234567890ABC3 /* Project object */ = {
+		CE48 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 1500;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
 				TargetAttributes = {
-					CE1234567890ABCA = {
-						CreatedOnToolsVersion = 15.0;
+					CE44 = {
+						CreatedOnToolsVersion = 16.4;
 					};
 				};
 			};
-			buildConfigurationList = CE1234567890ABC6 /* Build configuration list for PBXProject "RecordAnalyzerApp" */;
+			buildConfigurationList = CE49 /* Build configuration list for PBXProject "RecordAnalyzerApp" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -110,42 +223,53 @@
 				en,
 				Base,
 			);
-			mainGroup = CE1234567890ABC2;
-			productRefGroup = CE1234567890ABCC /* Products */;
+			mainGroup = CE31;
+			productRefGroup = CE33 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				CE1234567890ABCA /* RecordAnalyzer */,
+				CE44 /* RecordAnalyzer */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		CE1234567890ABC9 /* Resources */ = {
+		CE47 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CE1234567890ABD3 /* Preview Assets.xcassets in Resources */,
-				CE1234567890ABD1 /* Assets.xcassets in Resources */,
+				CE07 /* Preview Assets.xcassets in Resources */,
+				CE05 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		CE1234567890ABC7 /* Sources */ = {
+		CE46 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CE1234567890ABCF /* ContentView.swift in Sources */,
-				CE1234567890ABCD /* RecordAnalyzerApp.swift in Sources */,
+				CE03 /* ContentView.swift in Sources */,
+				CE01 /* RecordAnalyzerApp.swift in Sources */,
+				CE09 /* AuthenticationManager.swift in Sources */,
+				CE11 /* RecordingManager.swift in Sources */,
+				CE13 /* RecordingModel.swift in Sources */,
+				CE15 /* LoginView.swift in Sources */,
+				CE17 /* RegisterView.swift in Sources */,
+				CE19 /* HomeView.swift in Sources */,
+				CE21 /* HistoryView.swift in Sources */,
+				CE23 /* ProfileView.swift in Sources */,
+				CE25 /* RecordingRowView.swift in Sources */,
+				8A816D102DE597ED00F22D75 /* NetworkService.swift in Sources */,
+				CE27 /* RecordingDetailView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		CE1234567890ABD6 /* Debug */ = {
+		CE50 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -197,7 +321,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -208,7 +332,7 @@
 			};
 			name = Debug;
 		};
-		CE1234567890ABD7 /* Release */ = {
+		CE51 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -254,7 +378,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -264,7 +388,7 @@
 			};
 			name = Release;
 		};
-		CE1234567890ABD9 /* Debug */ = {
+		CE52 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -272,6 +396,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"RecordAnalyzer/Preview Content\"";
+				DEVELOPMENT_TEAM = 37HFR5V2JJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -284,15 +409,15 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.recordanalyzer.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.audichuang.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
-		CE1234567890ABDA /* Release */ = {
+		CE53 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -300,6 +425,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"RecordAnalyzer/Preview Content\"";
+				DEVELOPMENT_TEAM = 37HFR5V2JJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -312,10 +438,10 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.recordanalyzer.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.audichuang.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -323,25 +449,25 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		CE1234567890ABC6 /* Build configuration list for PBXProject "RecordAnalyzerApp" */ = {
+		CE45 /* Build configuration list for PBXNativeTarget "RecordAnalyzer" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				CE1234567890ABD6 /* Debug */,
-				CE1234567890ABD7 /* Release */,
+				CE52 /* Debug */,
+				CE53 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		CE1234567890ABD8 /* Build configuration list for PBXNativeTarget "RecordAnalyzer" */ = {
+		CE49 /* Build configuration list for PBXProject "RecordAnalyzerApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				CE1234567890ABD9 /* Debug */,
-				CE1234567890ABDA /* Release */,
+				CE50 /* Debug */,
+				CE51 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = CE1234567890ABC3 /* Project object */;
-} 
+	rootObject = CE48 /* Project object */;
+}
