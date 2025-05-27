@@ -4,6 +4,16 @@ struct RecordingDetailView: View {
     let recording: Recording
     @State private var selectedTab = 0
     @State private var showingShareSheet = false
+    @State private var detailRecording: Recording
+    @State private var isLoadingDetail = false
+    @State private var loadError: String?
+    
+    private let networkService = NetworkService.shared
+    
+    init(recording: Recording) {
+        self.recording = recording
+        self._detailRecording = State(initialValue: recording)
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -23,11 +33,49 @@ struct RecordingDetailView: View {
             }
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
         }
-        .navigationTitle(recording.title)
+        .navigationTitle(detailRecording.title)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 shareButton
+            }
+        }
+        .onAppear {
+            loadDetailIfNeeded()
+        }
+        .refreshable {
+            await loadRecordingDetail()
+        }
+    }
+    
+    /// 檢查是否需要載入完整詳情
+    private func loadDetailIfNeeded() {
+        // 如果轉錄或摘要為空或只是佔位符，則載入完整詳情
+        let needsTranscription = detailRecording.transcription?.isEmpty ?? true || detailRecording.transcription == "可用"
+        let needsSummary = detailRecording.summary?.isEmpty ?? true || detailRecording.summary == "可用"
+        
+        if needsTranscription || needsSummary {
+            Task {
+                await loadRecordingDetail()
+            }
+        }
+    }
+    
+    /// 載入完整錄音詳情
+    private func loadRecordingDetail() async {
+        isLoadingDetail = true
+        loadError = nil
+        
+        do {
+            let fullRecording = try await networkService.getRecordingDetail(id: detailRecording.id.uuidString)
+            await MainActor.run {
+                self.detailRecording = fullRecording
+                self.isLoadingDetail = false
+            }
+        } catch {
+            await MainActor.run {
+                self.loadError = error.localizedDescription
+                self.isLoadingDetail = false
             }
         }
     }
@@ -40,12 +88,12 @@ struct RecordingDetailView: View {
                     .foregroundColor(.blue)
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(recording.title)
+                    Text(detailRecording.title)
                         .font(.headline)
                         .fontWeight(.bold)
                         .lineLimit(2)
                     
-                    Text(recording.fileName)
+                    Text(detailRecording.fileName)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -54,11 +102,11 @@ struct RecordingDetailView: View {
             }
             
             HStack(spacing: 20) {
-                InfoItem(icon: "clock", title: "時長", value: recording.formattedDuration)
-                InfoItem(icon: "calendar", title: "日期", value: recording.formattedDate)
-                InfoItem(icon: "doc", title: "大小", value: recording.formattedFileSize)
-                if let status = recording.status {
-                    InfoItem(icon: statusIcon, title: "狀態", value: recording.statusText)
+                InfoItem(icon: "clock", title: "時長", value: detailRecording.formattedDuration)
+                InfoItem(icon: "calendar", title: "日期", value: detailRecording.formattedDate)
+                InfoItem(icon: "doc", title: "大小", value: detailRecording.formattedFileSize)
+                if let status = detailRecording.status {
+                    InfoItem(icon: statusIcon, title: "狀態", value: detailRecording.statusText)
                         .foregroundColor(statusColor)
                 }
             }
@@ -113,9 +161,14 @@ struct RecordingDetailView: View {
                         .font(.title2)
                         .fontWeight(.bold)
                     Spacer()
+                    
+                    if isLoadingDetail {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    }
                 }
                 
-                if let transcription = recording.transcription, !transcription.isEmpty {
+                if let transcription = detailRecording.transcription, !transcription.isEmpty, transcription != "可用" {
                     Text(transcription)
                         .font(.body)
                         .lineSpacing(6)
@@ -123,6 +176,10 @@ struct RecordingDetailView: View {
                         .padding()
                         .background(Color.gray.opacity(0.05))
                         .cornerRadius(12)
+                } else if isLoadingDetail {
+                    loadingPlaceholder
+                } else if let error = loadError {
+                    errorMessage(error)
                 } else {
                     notAvailableMessage(
                         title: "逐字稿尚未生成",
@@ -146,9 +203,14 @@ struct RecordingDetailView: View {
                         .font(.title2)
                         .fontWeight(.bold)
                     Spacer()
+                    
+                    if isLoadingDetail {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    }
                 }
                 
-                if let summary = recording.summary, !summary.isEmpty {
+                if let summary = detailRecording.summary, !summary.isEmpty, summary != "可用" {
                     // 使用MarkdownText組件渲染摘要
                     MarkdownText(content: summary)
                         .textSelection(.enabled)
@@ -163,7 +225,7 @@ struct RecordingDetailView: View {
                         )
                     
                     // 統計資訊
-                    if let transcription = recording.transcription, !transcription.isEmpty {
+                    if let transcription = detailRecording.transcription, !transcription.isEmpty, transcription != "可用" {
                         VStack(spacing: 12) {
                             HStack {
                                 Text("分析統計")
@@ -180,6 +242,10 @@ struct RecordingDetailView: View {
                         }
                         .padding(.top)
                     }
+                } else if isLoadingDetail {
+                    loadingPlaceholder
+                } else if let error = loadError {
+                    errorMessage(error)
                 } else {
                     notAvailableMessage(
                         title: "摘要尚未生成",
@@ -224,15 +290,15 @@ struct RecordingDetailView: View {
         .sheet(isPresented: $showingShareSheet) {
             ShareSheet(activityItems: [
                 "錄音分析結果",
-                "標題: \(recording.title)",
-                "逐字稿: \(recording.transcription ?? "尚未生成")",
-                "摘要: \(recording.summary ?? "尚未生成")"
+                "標題: \(detailRecording.title)",
+                "逐字稿: \(detailRecording.transcription ?? "尚未生成")",
+                "摘要: \(detailRecording.summary ?? "尚未生成")"
             ])
         }
     }
     
     private var statusIcon: String {
-        guard let status = recording.status else { return "questionmark.circle" }
+        guard let status = detailRecording.status else { return "questionmark.circle" }
         
         switch status.lowercased() {
         case "completed":
@@ -249,7 +315,7 @@ struct RecordingDetailView: View {
     }
     
     private var statusColor: Color {
-        guard let status = recording.status else { return .gray }
+        guard let status = detailRecording.status else { return .gray }
         
         switch status.lowercased() {
         case "completed":
@@ -263,6 +329,43 @@ struct RecordingDetailView: View {
         default:
             return .gray
         }
+    }
+    
+    private var loadingPlaceholder: some View {
+        VStack(spacing: 16) {
+            ProgressView("正在載入內容...")
+                .frame(maxWidth: .infinity, minHeight: 100)
+                .background(Color.gray.opacity(0.05))
+                .cornerRadius(12)
+        }
+    }
+    
+    private func errorMessage(_ error: String) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 40))
+                .foregroundColor(.orange)
+            
+            Text("載入失敗")
+                .font(.headline)
+                .fontWeight(.bold)
+            
+            Text(error)
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            
+            Button("重試") {
+                Task {
+                    await loadRecordingDetail()
+                }
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .frame(maxWidth: .infinity, minHeight: 100)
+        .padding()
+        .background(Color.orange.opacity(0.05))
+        .cornerRadius(12)
     }
 }
 

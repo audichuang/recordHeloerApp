@@ -326,6 +326,7 @@ class NetworkService: ObservableObject {
     }
     
     // MARK: - Recordings APIs
+    /// 獲取錄音列表（完整信息，包含轉錄和摘要）
     func getRecordings() async throws -> [Recording] {
         print("🔍 開始從API獲取錄音列表...")
         // 確保端點包含尾部斜線，避免重定向
@@ -337,14 +338,109 @@ class NetworkService: ObservableObject {
             print("⚠️ 警告: 沒有授權令牌，API請求可能失敗")
         }
         
-        let response: RecordingsResponse = try await performRequest(
+        let response: RecordingListResponse = try await performRequest(
             endpoint: "/recordings/", // 修正：添加尾部斜線
             requiresAuth: true,
-            responseType: RecordingsResponse.self
+            responseType: RecordingListResponse.self
         )
         
         print("📊 成功獲取 \(response.recordings.count) 個錄音記錄")
-        return response.recordings
+        
+        // 轉換為前端 Recording 格式
+        let recordings = response.recordings.map { recordingResponse in
+            Recording(
+                id: UUID(uuidString: recordingResponse.id) ?? UUID(),
+                title: recordingResponse.title,
+                fileName: recordingResponse.file_path,
+                duration: recordingResponse.duration,
+                createdAt: ISO8601DateFormatter().date(from: recordingResponse.created_at) ?? Date(),
+                transcription: recordingResponse.transcript,
+                summary: recordingResponse.summary,
+                fileURL: nil,
+                fileSize: recordingResponse.file_size,
+                status: recordingResponse.status
+            )
+        }
+        
+        return recordings
+    }
+    
+    /// 獲取錄音摘要列表（輕量級，僅基本信息）
+    func getRecordingsSummary() async throws -> [Recording] {
+        guard let token = getAuthToken() else {
+            throw NetworkError.unauthorized
+        }
+        
+        guard let url = URL(string: "\(baseURL)/recordings/summary") else {
+            throw NetworkError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        print("📡 發送請求到: \(url)")
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw NetworkError.invalidResponse
+            }
+            
+            print("📡 響應狀態碼: \(httpResponse.statusCode)")
+            
+            switch httpResponse.statusCode {
+            case 200...299:
+                // 解析響應
+                let jsonString = String(data: data, encoding: .utf8) ?? "無法解析響應數據"
+                print("📡 響應數據: \(jsonString.prefix(500))...")
+                
+                let decoder = JSONDecoder()
+                
+                do {
+                    // 解析為 RecordingSummaryList
+                    let response = try decoder.decode(RecordingSummaryList.self, from: data)
+                    print("✅ 成功解析錄音摘要列表: \(response.recordings.count) 個錄音")
+                    
+                    // 轉換為 Recording 對象（只包含基本信息）
+                    let recordings = response.recordings.map { summary in
+                        Recording(
+                            id: UUID(uuidString: summary.id) ?? UUID(),
+                            title: summary.title,
+                            fileName: "", // 摘要API不包含文件路徑
+                            duration: summary.duration,
+                            createdAt: ISO8601DateFormatter().date(from: summary.created_at) ?? Date(),
+                            transcription: summary.has_transcript ? "可用" : nil,
+                            summary: summary.has_summary ? "可用" : nil,
+                            fileURL: nil,
+                            fileSize: summary.file_size,
+                            status: summary.status
+                        )
+                    }
+                    
+                    return recordings
+                } catch {
+                    print("❌ 解析錄音摘要列表失敗: \(error.localizedDescription)")
+                    throw NetworkError.decodingError
+                }
+                
+            case 401:
+                throw NetworkError.unauthorized
+            case 400...499:
+                throw NetworkError.clientError(httpResponse.statusCode)
+            case 500...599:
+                throw NetworkError.serverError(httpResponse.statusCode)
+            default:
+                throw NetworkError.unknownError
+            }
+            
+        } catch let error as NetworkError {
+            throw error
+        } catch {
+            throw NetworkError.networkError(error.localizedDescription)
+        }
     }
     
     func uploadRecording(fileURL: URL, title: String, onProgress: @escaping (Double) -> Void) async throws -> Recording {
@@ -693,6 +789,83 @@ class NetworkService: ObservableObject {
         print("✅ 成功刪除錄音: \(id.uuidString)")
     }
     
+    /// 獲取特定錄音的詳細信息（包含完整轉錄和摘要）
+    func getRecordingDetail(id: String) async throws -> Recording {
+        guard let token = getAuthToken() else {
+            throw NetworkError.unauthorized
+        }
+        
+        guard let url = URL(string: "\(baseURL)/recordings/\(id)") else {
+            throw NetworkError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        print("📡 發送請求到: \(url)")
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw NetworkError.invalidResponse
+            }
+            
+            print("📡 響應狀態碼: \(httpResponse.statusCode)")
+            
+            switch httpResponse.statusCode {
+            case 200...299:
+                let jsonString = String(data: data, encoding: .utf8) ?? "無法解析響應數據"
+                print("📡 響應數據: \(jsonString.prefix(500))...")
+                
+                let decoder = JSONDecoder()
+                
+                do {
+                    // 解析為 RecordingResponse（後端格式）
+                    let response = try decoder.decode(RecordingResponse.self, from: data)
+                    print("✅ 成功解析錄音詳情: \(response.title)")
+                    
+                    // 轉換為前端的 Recording 格式
+                    let recording = Recording(
+                        id: UUID(uuidString: response.id) ?? UUID(),
+                        title: response.title,
+                        fileName: response.file_path,
+                        duration: response.duration,
+                        createdAt: ISO8601DateFormatter().date(from: response.created_at) ?? Date(),
+                        transcription: response.transcript,
+                        summary: response.summary,
+                        fileURL: nil,
+                        fileSize: response.file_size,
+                        status: response.status
+                    )
+                    
+                    return recording
+                } catch {
+                    print("❌ 解析錄音詳情失敗: \(error.localizedDescription)")
+                    throw NetworkError.decodingError
+                }
+                
+            case 401:
+                throw NetworkError.unauthorized
+            case 404:
+                throw NetworkError.apiError("錄音不存在")
+            case 400...499:
+                throw NetworkError.clientError(httpResponse.statusCode)
+            case 500...599:
+                throw NetworkError.serverError(httpResponse.statusCode)
+            default:
+                throw NetworkError.unknownError
+            }
+            
+        } catch let error as NetworkError {
+            throw error
+        } catch {
+            throw NetworkError.networkError(error.localizedDescription)
+        }
+    }
+    
     // MARK: - Helper Methods
     // 根據檔案擴展名獲取MIME類型
     private func mimeTypeForFileExtension(_ fileExtension: String) -> String {
@@ -778,6 +951,13 @@ struct SystemStatusResponse: Codable {
     let version: String
 }
 
+struct RecordingListResponse: Codable {
+    let recordings: [RecordingResponse]
+    let total: Int
+    let page: Int
+    let per_page: Int
+}
+
 struct RecordingsResponse: Codable {
     let recordings: [Recording]
 }
@@ -793,6 +973,49 @@ struct UploadResponse: Codable {
         case recording_id
         case status
     }
+}
+
+// 添加錄音摘要響應模型
+struct RecordingSummary: Codable {
+    let id: String
+    let title: String
+    let duration: TimeInterval?
+    let file_size: Int
+    let status: String
+    let created_at: String
+    let has_transcript: Bool
+    let has_summary: Bool
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case duration
+        case file_size
+        case status
+        case created_at
+        case has_transcript
+        case has_summary
+    }
+}
+
+struct RecordingSummaryList: Codable {
+    let recordings: [RecordingSummary]
+    let total: Int
+    let page: Int
+    let per_page: Int
+}
+
+// 添加後端錄音詳情響應模型
+struct RecordingResponse: Codable {
+    let id: String
+    let title: String
+    let file_path: String
+    let duration: TimeInterval?
+    let file_size: Int
+    let status: String
+    let created_at: String
+    let transcript: String?
+    let summary: String?
 }
 
 // MARK: - Upload Delegate

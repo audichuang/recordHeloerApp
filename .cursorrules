@@ -35,7 +35,7 @@
 #### 技術架構：
 - **狀態管理**: @StateObject, @ObservableObject
 - **數據持久化**: UserDefaults + Codable
-- **網路請求**: 指向 localhost:5000/api
+- **網路請求**: 指向 `http://audimacbookpro:9527/api` (透過 Tailscale 網絡)
 - **UI框架**: SwiftUI with 中文介面
 - **權限**: 麥克風使用權限、語音識別權限
 
@@ -43,7 +43,20 @@
 - **位置**: `recordhelper/`
 - **框架**: FastAPI + Python
 - **狀態**: 已開發完成
-- **API端點**: http://localhost:5000/api
+- **API端點**: http://localhost:9527/api (本地) 或 http://audimacbookpro:9527/api (Tailscale 網絡)
+
+### 🌐 網絡配置說明
+#### Tailscale 配置 (重要)
+- **主機名**: `audimacbookpro`
+- **後端端口**: `9527`
+- **完整URL**: `http://audimacbookpro:9527/api`
+- **用途**: 透過 Tailscale 網絡讓手機可以連接到電腦進行測試
+- **本地測試**: 在電腦上使用 `http://localhost:9527/api`
+- **手機測試**: 在手機上使用 `http://audimacbookpro:9527/api`
+
+#### API 基礎配置
+- **開發環境**: `http://audimacbookpro:9527/api` (透過 Tailscale)
+- **生產環境**: `https://api.recordhelper.com/api` (未來部署)
 
 #### 主要API端點：
 1. **認證 API** (`/api/auth`)
@@ -60,6 +73,7 @@
 3. **錄音處理 API** (`/api/recordings`)
    - POST `/api/recordings/upload` - 上傳錄音文件
    - GET `/api/recordings` - 獲取錄音清單
+   - GET `/api/recordings/summary` - 獲取錄音摘要列表 (輕量級)
    - GET `/api/recordings/{id}` - 獲取特定錄音詳情
    - DELETE `/api/recordings/{id}` - 刪除錄音
    - GET `/api/recordings/{id}/download` - 下載錄音文件
@@ -89,7 +103,7 @@
    - 採用 中文繁體 作為界面語言
 
 2. **API 整合**：
-   - 前端請求指向 `http://localhost:5000/api`
+   - 前端請求指向 `http://audimacbookpro:9527/api`
    - 使用 async/await 處理網路請求
    - 實作適當的錯誤處理和載入狀態
 
@@ -167,7 +181,7 @@ source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 python run_fastapi.py
 ```
-後端服務將在 http://localhost:5000 啟動
+後端服務將在 http://localhost:9527 啟動 (Tailscale 網絡: http://audimacbookpro:9527)
 
 ### 啟動iOS前端：
 ```bash
@@ -184,9 +198,10 @@ xcrun simctl launch booted com.recordanalyzer.app
 3. 按 Cmd+R 運行
 
 ## 注意事項
-- 前端目前使用模擬數據，需要整合真實 API
-- 後端已完成，前端需要連接實際的網路請求
+- 前端已整合真實 API，通過 Tailscale 網絡連接後端
+- 後端運行在端口 9527，前端使用 `http://audimacbookpro:9527/api`
 - 確保在開發時同時啟動後端服務和 iOS 模擬器
+- 手機測試需要透過 Tailscale 網絡連接
 - 所有用戶界面文字使用繁體中文
-- API文檔可在 http://localhost:5000/docs 查看
+- API文檔可在 http://audimacbookpro:9527/docs 查看
 - **🔥 重要：任何程式碼交付前都必須確保可以成功 build**

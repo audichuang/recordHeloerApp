@@ -10,7 +10,7 @@ struct Recording: Identifiable, Codable {
     let summary: String?
     let fileURL: URL?
     let fileSize: Int?
-    let status: String?
+    var status: String?
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -82,31 +82,68 @@ struct Recording: Identifiable, Codable {
     }
     
     var formattedDuration: String {
-        guard let duration = duration else { return "未知" }
-        let minutes = Int(duration) / 60
-        let seconds = Int(duration) % 60
-        return String(format: "%02d:%02d", minutes, seconds)
+        guard let duration = duration, duration > 0 else { return "--:--" }
+        let totalSeconds = Int(duration)
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%d:%02d", minutes, seconds)
     }
     
     var formattedFileSize: String {
-        guard let size = fileSize else { return "未知" }
+        guard let size = fileSize, size > 0 else { return "-- MB" }
         
         let kb = Double(size) / 1024.0
         let mb = kb / 1024.0
         
         if mb >= 1.0 {
             return String(format: "%.1f MB", mb)
-        } else {
+        } else if kb >= 1.0 {
             return String(format: "%.0f KB", kb)
+        } else {
+            return "< 1 KB"
         }
     }
     
     var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        formatter.locale = Locale(identifier: "zh_TW")
-        return formatter.string(from: createdAt)
+        let now = Date()
+        let calendar = Calendar.current
+        
+        // 檢查是否是今天
+        if calendar.isDateInToday(createdAt) {
+            let timeFormatter = DateFormatter()
+            timeFormatter.dateFormat = "HH:mm"
+            return "今天 \(timeFormatter.string(from: createdAt))"
+        }
+        
+        // 檢查是否是昨天
+        if calendar.isDateInYesterday(createdAt) {
+            let timeFormatter = DateFormatter()
+            timeFormatter.dateFormat = "HH:mm"
+            return "昨天 \(timeFormatter.string(from: createdAt))"
+        }
+        
+        // 檢查是否是本週
+        let daysSinceCreated = calendar.dateComponents([.day], from: createdAt, to: now).day ?? 0
+        if daysSinceCreated < 7 {
+            let dayFormatter = DateFormatter()
+            dayFormatter.dateFormat = "EEEE HH:mm"
+            dayFormatter.locale = Locale(identifier: "zh_TW")
+            return dayFormatter.string(from: createdAt)
+        }
+        
+        // 檢查是否是本年
+        if calendar.component(.year, from: createdAt) == calendar.component(.year, from: now) {
+            let monthFormatter = DateFormatter()
+            monthFormatter.dateFormat = "M月d日 HH:mm"
+            monthFormatter.locale = Locale(identifier: "zh_TW")
+            return monthFormatter.string(from: createdAt)
+        }
+        
+        // 其他情況顯示完整日期
+        let fullFormatter = DateFormatter()
+        fullFormatter.dateFormat = "yy年M月d日"
+        fullFormatter.locale = Locale(identifier: "zh_TW")
+        return fullFormatter.string(from: createdAt)
     }
     
     var statusText: String {
