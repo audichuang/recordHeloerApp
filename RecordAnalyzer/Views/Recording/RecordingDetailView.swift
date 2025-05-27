@@ -149,13 +149,18 @@ struct RecordingDetailView: View {
                 }
                 
                 if let summary = recording.summary, !summary.isEmpty {
-                    Text(summary)
-                        .font(.body)
-                        .lineSpacing(6)
+                    // 使用MarkdownText組件渲染摘要
+                    MarkdownText(content: summary)
                         .textSelection(.enabled)
                         .padding()
-                        .background(Color.green.opacity(0.05))
-                        .cornerRadius(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.green.opacity(0.05))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.green.opacity(0.2), lineWidth: 1)
+                                )
+                        )
                     
                     // 統計資訊
                     if let transcription = recording.transcription, !transcription.isEmpty {
@@ -168,10 +173,12 @@ struct RecordingDetailView: View {
                             }
                             
                             HStack(spacing: 16) {
-                                StatCard(title: "字數", value: "\(transcription.count)", icon: "textformat.123")
-                                StatCard(title: "段落", value: "\(summary.components(separatedBy: "\n").count)", icon: "list.number")
+                                StatCard(title: "原文字數", value: "\(transcription.count)", icon: "textformat.123")
+                                StatCard(title: "摘要字數", value: "\(summary.count)", icon: "doc.text")
+                                StatCard(title: "壓縮比", value: String(format: "%.1f%%", Double(summary.count) / Double(transcription.count) * 100), icon: "arrow.down.circle")
                             }
                         }
+                        .padding(.top)
                     }
                 } else {
                     notAvailableMessage(

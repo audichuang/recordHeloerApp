@@ -22,6 +22,7 @@
 		CE23 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE24 /* ProfileView.swift */; };
 		CE25 /* RecordingRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE26 /* RecordingRowView.swift */; };
 		CE27 /* RecordingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE28 /* RecordingDetailView.swift */; };
+		CE54 /* MarkdownText.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE55 /* MarkdownText.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +42,7 @@
 		CE26 /* RecordingRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingRowView.swift; sourceTree = "<group>"; };
 		CE28 /* RecordingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingDetailView.swift; sourceTree = "<group>"; };
 		CE29 /* RecordAnalyzer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RecordAnalyzer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CE55 /* MarkdownText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownText.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -168,6 +170,7 @@
 			isa = PBXGroup;
 			children = (
 				CE26 /* RecordingRowView.swift */,
+				CE55 /* MarkdownText.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -263,6 +266,7 @@
 				CE25 /* RecordingRowView.swift in Sources */,
 				8A816D102DE597ED00F22D75 /* NetworkService.swift in Sources */,
 				CE27 /* RecordingDetailView.swift in Sources */,
+				CE54 /* MarkdownText.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -399,9 +403,48 @@
 				DEVELOPMENT_TEAM = 37HFR5V2JJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDocumentTypes = (
+					{
+						CFBundleTypeExtensions = (
+							mp3,
+							wav,
+							m4a,
+							aac,
+							flac,
+							mp4,
+							ogg,
+						);
+						CFBundleTypeIconFiles = ();
+						CFBundleTypeName = "Audio Files";
+						CFBundleTypeRole = Editor;
+						LSHandlerRank = Owner;
+						LSItemContentTypes = (
+							"public.mp3",
+							"public.audio",
+							"com.apple.m4a-audio",
+							"public.aac-audio",
+							"public.mpeg-4-audio",
+							"org.xiph.flac",
+						);
+						LSTypeIsPackage = NO;
+					},
+				);
+				INFOPLIST_KEY_CFBundleURLTypes = (
+					{
+						CFBundleURLName = "錄音分析助手";
+						CFBundleURLSchemes = (
+							recordanalyzer,
+							recordanalyzer-files,
+						);
+					},
+				);
+				INFOPLIST_KEY_CFBundleDisplayName = "錄音分析助手";
+				INFOPLIST_KEY_CFBundleName = "錄音分析助手";
+				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportsDocumentBrowser = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -428,9 +471,48 @@
 				DEVELOPMENT_TEAM = 37HFR5V2JJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDocumentTypes = (
+					{
+						CFBundleTypeExtensions = (
+							mp3,
+							wav,
+							m4a,
+							aac,
+							flac,
+							mp4,
+							ogg,
+						);
+						CFBundleTypeIconFiles = ();
+						CFBundleTypeName = "Audio Files";
+						CFBundleTypeRole = Editor;
+						LSHandlerRank = Owner;
+						LSItemContentTypes = (
+							"public.mp3",
+							"public.audio",
+							"com.apple.m4a-audio",
+							"public.aac-audio",
+							"public.mpeg-4-audio",
+							"org.xiph.flac",
+						);
+						LSTypeIsPackage = NO;
+					},
+				);
+				INFOPLIST_KEY_CFBundleURLTypes = (
+					{
+						CFBundleURLName = "錄音分析助手";
+						CFBundleURLSchemes = (
+							recordanalyzer,
+							recordanalyzer-files,
+						);
+					},
+				);
+				INFOPLIST_KEY_CFBundleDisplayName = "錄音分析助手";
+				INFOPLIST_KEY_CFBundleName = "錄音分析助手";
+				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportsDocumentBrowser = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (

@@ -155,30 +155,68 @@ struct HomeView: View {
                 .font(.headline)
                 .fontWeight(.semibold)
             
-            Button(action: {
-                showingFilePicker = true
-            }) {
-                VStack(spacing: 12) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 40))
-                        .foregroundColor(.blue)
-                    
-                    Text("選擇錄音檔案")
-                        .font(.headline)
-                        .foregroundColor(.blue)
-                    
-                    Text("支援 MP3, M4A, WAV 等格式")
+            VStack(spacing: 12) {
+                Button(action: {
+                    showingFilePicker = true
+                }) {
+                    VStack(spacing: 12) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 40))
+                            .foregroundColor(.blue)
+                        
+                        Text("選擇錄音檔案")
+                            .font(.headline)
+                            .foregroundColor(.blue)
+                        
+                        Text("支援 MP3, M4A, WAV 等格式")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 30)
+                    .background(
+                        RoundedRectangle(cornerRadius: 15)
+                            .stroke(Color.blue, style: StrokeStyle(lineWidth: 2, dash: [10]))
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+                
+                // 分割線
+                HStack {
+                    VStack { Divider() }
+                    Text("或")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                    VStack { Divider() }
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 30)
-                .background(
-                    RoundedRectangle(cornerRadius: 15)
-                        .stroke(Color.blue, style: StrokeStyle(lineWidth: 2, dash: [10]))
-                )
+                .padding(.horizontal)
+                
+                // 從其他APP導入提示
+                VStack(spacing: 8) {
+                    HStack {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.title2)
+                            .foregroundColor(.green)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("從其他APP分享")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.green)
+                            
+                            Text("在語音備忘錄或其他錄音APP中點擊分享，選擇「錄音分析助手」")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(2)
+                        }
+                        
+                        Spacer()
+                    }
+                    .padding()
+                    .background(Color.green.opacity(0.1))
+                    .cornerRadius(12)
+                }
             }
-            .buttonStyle(PlainButtonStyle())
         }
         .padding()
         .background(Color.gray.opacity(0.05))

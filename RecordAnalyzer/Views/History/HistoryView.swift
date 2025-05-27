@@ -4,6 +4,7 @@ struct HistoryView: View {
     @EnvironmentObject var recordingManager: RecordingManager
     @State private var searchText = ""
     @State private var sortOption: SortOption = .dateDescending
+    @State private var showingLoadingAnimation = true
     
     enum SortOption: String, CaseIterable {
         case dateDescending = "最新優先"
@@ -17,19 +18,18 @@ struct HistoryView: View {
             VStack(spacing: 0) {
                 // 搜尋和排序區域
                 searchAndSortSection
+                    .opacity(recordingManager.isLoading ? 0.6 : 1.0)
+                    .animation(.easeInOut(duration: 0.3), value: recordingManager.isLoading)
                 
                 // 錄音列表
                 recordingsList
             }
             .navigationTitle("歷史紀錄")
             .refreshable {
-                await recordingManager.loadRecordings()
+                await refreshData()
             }
             .onAppear {
-                // 確保每次視圖出現時都從後端加載最新的錄音數據
-                Task {
-                    await recordingManager.loadRecordings()
-                }
+                loadDataIfNeeded()
             }
         }
     }
@@ -70,65 +70,112 @@ struct HistoryView: View {
                 
                 Spacer()
                 
-                Text("\(filteredAndSortedRecordings.count) 個錄音")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                HStack(spacing: 4) {
+                    if recordingManager.isLoading {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                    }
+                    
+                    Text("\(filteredAndSortedRecordings.count) 個錄音")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
         }
         .padding()
-        .background(Color.white)
+        .background(Color(.systemBackground))
+        .shadow(color: .black.opacity(0.05), radius: 1, x: 0, y: 1)
     }
     
     private var recordingsList: some View {
         Group {
-            if recordingManager.isLoading {
-                ProgressView("載入中...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            if recordingManager.isLoading && recordingManager.recordings.isEmpty {
+                // 骨架屏載入動畫
+                loadingSkeletonView
             } else if filteredAndSortedRecordings.isEmpty {
                 emptyStateView
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
             } else {
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         ForEach(filteredAndSortedRecordings) { recording in
                             NavigationLink(destination: RecordingDetailView(recording: recording)) {
                                 RecordingRowView(recording: recording)
+                                    .transition(.asymmetric(
+                                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                                        removal: .move(edge: .leading).combined(with: .opacity)
+                                    ))
                             }
                             .buttonStyle(PlainButtonStyle())
                         }
                     }
                     .padding()
+                    .animation(.spring(response: 0.6, dampingFraction: 0.8), value: filteredAndSortedRecordings.count)
+                }
+                .refreshable {
+                    await refreshData()
                 }
             }
         }
     }
     
+    private var loadingSkeletonView: some View {
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                ForEach(0..<6, id: \.self) { _ in
+                    SkeletonRowView()
+                }
+            }
+            .padding()
+        }
+        .disabled(true)
+    }
+    
     private var emptyStateView: some View {
-        VStack(spacing: 20) {
-            Image(systemName: searchText.isEmpty ? "music.note.list" : "magnifyingglass")
-                .font(.system(size: 60))
-                .foregroundColor(.gray)
+        VStack(spacing: 24) {
+            // 動畫圖標
+            ZStack {
+                Circle()
+                    .fill(Color.blue.opacity(0.1))
+                    .frame(width: 120, height: 120)
+                
+                Image(systemName: searchText.isEmpty ? "music.note.list" : "magnifyingglass")
+                    .font(.system(size: 40, weight: .light))
+                    .foregroundColor(.blue)
+                    .scaleEffect(showingLoadingAnimation ? 1.1 : 1.0)
+                    .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: showingLoadingAnimation)
+            }
             
-            Text(searchText.isEmpty ? "尚無錄音記錄" : "找不到相關錄音")
-                .font(.title2)
-                .fontWeight(.medium)
-                .foregroundColor(.secondary)
-            
-            Text(searchText.isEmpty ? 
-                 "上傳您的第一個錄音文件開始使用" : 
-                 "請嘗試其他搜尋關鍵字")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
+            VStack(spacing: 12) {
+                Text(searchText.isEmpty ? "尚無錄音記錄" : "找不到相關錄音")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                
+                Text(searchText.isEmpty ? 
+                     "上傳您的第一個錄音文件開始使用智能分析功能" : 
+                     "請嘗試其他搜尋關鍵字或調整篩選條件")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
             
             if searchText.isEmpty {
-                NavigationLink("開始上傳") {
+                NavigationLink("立即上傳錄音") {
                     HomeView()
                 }
                 .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .scaleEffect(showingLoadingAnimation ? 1.05 : 1.0)
+                .animation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true), value: showingLoadingAnimation)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
+        .onAppear {
+            showingLoadingAnimation = true
+        }
     }
     
     private var filteredAndSortedRecordings: [Recording] {
@@ -160,6 +207,83 @@ struct HistoryView: View {
                 }
             }
         }
+    }
+    
+    private func loadDataIfNeeded() {
+        // 只在真正需要時才載入數據
+        if recordingManager.recordings.isEmpty && !recordingManager.isLoading {
+            Task {
+                await recordingManager.loadRecordings()
+            }
+        }
+    }
+    
+    private func refreshData() async {
+        // 下拉刷新
+        await recordingManager.loadRecordings()
+    }
+}
+
+struct SkeletonRowView: View {
+    @State private var isShimmering = false
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            // 錄音圖標骨架
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.gray.opacity(0.3))
+                .frame(width: 50, height: 50)
+                .shimmer(isShimmering)
+            
+            VStack(alignment: .leading, spacing: 8) {
+                // 標題骨架
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(height: 16)
+                    .frame(maxWidth: .infinity)
+                    .shimmer(isShimmering)
+                
+                // 詳細信息骨架
+                HStack {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.gray.opacity(0.2))
+                        .frame(width: 60, height: 12)
+                        .shimmer(isShimmering)
+                    
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.gray.opacity(0.2))
+                        .frame(width: 80, height: 12)
+                        .shimmer(isShimmering)
+                    
+                    Spacer()
+                }
+            }
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .onAppear {
+            isShimmering = true
+        }
+    }
+}
+
+extension View {
+    func shimmer(_ isShimmering: Bool) -> some View {
+        self.overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.clear, Color.white.opacity(0.6), Color.clear],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .scaleEffect(x: isShimmering ? 3 : 0, anchor: .leading)
+                .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: false), value: isShimmering)
+        )
+        .clipped()
     }
 }
 
