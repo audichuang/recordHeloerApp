@@ -8,6 +8,8 @@ struct HomeView: View {
     @State private var showingUploadDialog = false
     @State private var uploadTitle = ""
     @State private var selectedFileURL: URL?
+    @State private var errorMessage: String?
+    @State private var showingErrorAlert = false
     
     var body: some View {
         NavigationView {
@@ -24,6 +26,11 @@ struct HomeView: View {
                         uploadProgressSection
                     }
                     
+                    // 錯誤信息
+                    if let error = recordingManager.errorMessage {
+                        errorBanner(message: error)
+                    }
+                    
                     // 最近的錄音
                     recentRecordingsSection
                 }
@@ -36,17 +43,37 @@ struct HomeView: View {
         }
         .fileImporter(
             isPresented: $showingFilePicker,
-            allowedContentTypes: [UTType.audio],
+            allowedContentTypes: [
+                .audio, 
+                .mp3,
+                .wav,
+                UTType(filenameExtension: "m4a") ?? .audio,
+                UTType(filenameExtension: "aac") ?? .audio,
+                UTType(filenameExtension: "flac") ?? .audio
+            ],
             allowsMultipleSelection: false
         ) { result in
             switch result {
             case .success(let urls):
                 if let url = urls.first {
-                    selectedFileURL = url
-                    showingUploadDialog = true
+                    // 檢查文件擴展名
+                    let validExtensions = ["mp3", "wav", "m4a", "aac", "flac", "mp4", "ogg"]
+                    if validExtensions.contains(url.pathExtension.lowercased()) {
+                        // 嘗試從文件名推斷標題
+                        let suggestedTitle = url.deletingPathExtension().lastPathComponent
+                        
+                        selectedFileURL = url
+                        uploadTitle = suggestedTitle
+                        showingUploadDialog = true
+                    } else {
+                        errorMessage = "不支援的音頻格式: \(url.pathExtension). 請上傳 MP3, WAV, M4A, AAC 或 FLAC 格式文件。"
+                        showingErrorAlert = true
+                    }
                 }
             case .failure(let error):
                 print("檔案選擇錯誤: \(error)")
+                errorMessage = "檔案選擇失敗: \(error.localizedDescription)"
+                showingErrorAlert = true
             }
         }
         .alert("上傳錄音", isPresented: $showingUploadDialog) {
@@ -54,6 +81,7 @@ struct HomeView: View {
             Button("上傳") {
                 if let url = selectedFileURL {
                     Task {
+                        print("開始上傳文件: \(url.lastPathComponent)")
                         _ = await recordingManager.uploadRecording(
                             fileURL: url,
                             title: uploadTitle.isEmpty ? "未命名錄音" : uploadTitle
@@ -68,7 +96,18 @@ struct HomeView: View {
                 selectedFileURL = nil
             }
         } message: {
-            Text("請為您的錄音檔案輸入一個標題")
+            if let url = selectedFileURL {
+                Text("將上傳: \(url.lastPathComponent)\n請為您的錄音檔案輸入一個標題")
+            } else {
+                Text("請為您的錄音檔案輸入一個標題")
+            }
+        }
+        .alert("上傳錯誤", isPresented: $showingErrorAlert) {
+            Button("確定", role: .cancel) {
+                errorMessage = nil
+            }
+        } message: {
+            Text(errorMessage ?? "未知錯誤")
         }
     }
     
@@ -155,6 +194,21 @@ struct HomeView: View {
         }
         .padding()
         .background(Color.orange.opacity(0.1))
+        .cornerRadius(15)
+    }
+    
+    private func errorBanner(message: String) -> some View {
+        VStack(spacing: 12) {
+            Text("錯誤信息")
+                .font(.headline)
+                .fontWeight(.semibold)
+            
+            Text(message)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .padding()
+        .background(Color.red.opacity(0.1))
         .cornerRadius(15)
     }
     

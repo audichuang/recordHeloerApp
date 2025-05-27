@@ -94,3 +94,5 @@ fastlane/test_output
 
 # Bundle artifact
 *.bundle 
+
+.env

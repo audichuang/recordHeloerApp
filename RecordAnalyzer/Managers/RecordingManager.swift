@@ -27,7 +27,38 @@ class RecordingManager: ObservableObject {
         uploadProgress = 0.0
         errorMessage = nil
         
+        // 如果是從 iCloud 或外部存儲獲取的文件，可能需要先下載
+        let didStartAccessing = fileURL.startAccessingSecurityScopedResource()
+        if !didStartAccessing {
+            print("⚠️ 警告：無法訪問安全資源，可能影響上傳")
+        }
+        
+        defer {
+            if didStartAccessing {
+                fileURL.stopAccessingSecurityScopedResource()
+            }
+        }
+        
         do {
+            // 檢查文件大小
+            guard let attributes = try? FileManager.default.attributesOfItem(atPath: fileURL.path),
+                  let fileSize = attributes[.size] as? NSNumber,
+                  fileSize.intValue > 0 else {
+                errorMessage = "無法獲取文件大小或文件為空"
+                isUploading = false
+                return nil
+            }
+            
+            // 檢查文件格式
+            let validExtensions = ["mp3", "wav", "m4a", "aac", "flac", "mp4", "ogg"]
+            guard validExtensions.contains(fileURL.pathExtension.lowercased()) else {
+                errorMessage = "不支援的音頻格式: \(fileURL.pathExtension)"
+                isUploading = false
+                return nil
+            }
+            
+            print("📤 準備上傳文件: \(fileURL.lastPathComponent), 大小: \(fileSize.intValue / 1024 / 1024)MB")
+            
             // 調用真實API上傳
             let newRecording = try await networkService.uploadRecording(
                 fileURL: fileURL,
@@ -47,6 +78,22 @@ class RecordingManager: ObservableObject {
             uploadProgress = 0.0
             
             return newRecording
+        } catch let error as NetworkError {
+            switch error {
+            case .unauthorized:
+                errorMessage = "驗證失敗，請重新登入"
+            case .apiError(let message):
+                errorMessage = "上傳失敗：\(message)"
+            case .networkError(let message):
+                errorMessage = "網絡錯誤：\(message)"
+            case .serverError(let code):
+                errorMessage = "伺服器錯誤 (\(code))"
+            default:
+                errorMessage = "上傳失敗：\(error.localizedDescription)"
+            }
+            isUploading = false
+            uploadProgress = 0.0
+            return nil
         } catch {
             errorMessage = "上傳失敗：\(error.localizedDescription)"
             isUploading = false

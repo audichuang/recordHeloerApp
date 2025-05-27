@@ -200,10 +200,20 @@ struct ProfileView: View {
     
     private var formattedJoinDate: String {
         guard let user = authManager.currentUser else { return "" }
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.locale = Locale(identifier: "zh_TW")
-        return formatter.string(from: user.createdAt)
+        
+        // createdAt 是 String 類型，不需要 Optional 解包
+        let dateString = user.createdAt
+        
+        // 嘗試將 ISO 8601 格式的字符串轉換為日期
+        if let isoDate = ISO8601DateFormatter().date(from: dateString) {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .medium
+            formatter.locale = Locale(identifier: "zh_TW")
+            return formatter.string(from: isoDate)
+        } else {
+            // 如果無法解析日期格式，直接返回原始字符串
+            return dateString
+        }
     }
     
     private var totalDuration: String {
@@ -227,8 +237,13 @@ struct ProfileView: View {
     private var currentMonthRecordings: Int {
         let calendar = Calendar.current
         let now = Date()
+        let currentMonth = calendar.component(.month, from: now)
+        let currentYear = calendar.component(.year, from: now)
+        
         return recordingManager.recordings.filter { recording in
-            calendar.isDate(recording.createdAt, equalTo: now, toGranularity: .month)
+            let month = calendar.component(.month, from: recording.createdAt)
+            let year = calendar.component(.year, from: recording.createdAt)
+            return month == currentMonth && year == currentYear
         }.count
     }
 }

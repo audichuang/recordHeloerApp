@@ -122,6 +122,41 @@
 - 開發環境：Xcode 16.0+
 - 構建命令：`xcodebuild -project RecordAnalyzerApp.xcodeproj -scheme RecordAnalyzer`
 
+## 🚀 **交付規則 (重要)**
+
+### **必要交付條件：**
+- ⚠️ **所有程式碼修改完成後，必須確保專案可以成功 build**
+- ⚠️ **只有在 build 沒有問題的情況下，才可以交付給使用者**
+- ⚠️ **交付前必須執行完整的編譯檢查**
+
+### **Build 檢查流程：**
+1. **Xcode Build 檢查**：
+   ```bash
+   cd recordHeloerApp
+   xcodebuild -project RecordAnalyzerApp.xcodeproj -scheme RecordAnalyzer -destination 'platform=iOS Simulator,name=iPhone 16' clean build
+   ```
+
+2. **編譯成功標準**：
+   - ✅ 無編譯錯誤 (Compile Errors)
+   - ✅ 無語法錯誤 (Syntax Errors)
+   - ✅ 無型別錯誤 (Type Errors)
+   - ⚠️ 警告 (Warnings) 可接受但需要記錄
+
+3. **交付前檢查清單**：
+   - [ ] 程式碼語法正確
+   - [ ] 所有 import 語句有效
+   - [ ] 所有型別定義正確
+   - [ ] SwiftUI 視圖結構完整
+   - [ ] @Published 屬性正確使用
+   - [ ] async/await 語法正確
+   - [ ] Build 成功完成
+
+### **錯誤處理原則：**
+- 如果 build 失敗，必須先修復所有編譯錯誤
+- 提供修復建議和完整的可編譯程式碼
+- 重新執行 build 檢查直到成功
+- 確認無誤後才提供最終版本給使用者
+
 ## 快速啟動指南
 
 ### 啟動後端服務：
@@ -153,4 +188,5 @@ xcrun simctl launch booted com.recordanalyzer.app
 - 後端已完成，前端需要連接實際的網路請求
 - 確保在開發時同時啟動後端服務和 iOS 模擬器
 - 所有用戶界面文字使用繁體中文
-- API文檔可在 http://localhost:5000/docs 查看 
+- API文檔可在 http://localhost:5000/docs 查看
+- **🔥 重要：任何程式碼交付前都必須確保可以成功 build**

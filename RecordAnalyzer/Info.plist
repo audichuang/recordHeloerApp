@@ -50,5 +50,20 @@
 	<string>此應用程式需要使用麥克風來進行語音錄製功能</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>此應用程式需要語音識別權限來分析錄音內容</string>
+	<key>UISupportsDocumentBrowser</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>此應用程式需要存取您的媒體庫以選取音頻文件</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>此應用程式需要存取您的文檔以上傳音頻文件</string>
+	<key>NSFileProviderDomainUsageDescription</key>
+	<string>此應用程式需要存取文件提供者以上傳音頻文件</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 </dict>
 </plist> 
