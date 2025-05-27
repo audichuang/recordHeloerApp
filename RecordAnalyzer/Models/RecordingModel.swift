@@ -4,24 +4,71 @@ struct Recording: Identifiable, Codable {
     var id: UUID
     let title: String
     let fileName: String
-    let duration: TimeInterval
+    let duration: TimeInterval?
     let createdAt: Date
-    let transcription: String
-    let summary: String
+    let transcription: String?
+    let summary: String?
     let fileURL: URL?
+    let fileSize: Int?
+    let status: String?
     
     enum CodingKeys: String, CodingKey {
         case id
         case title
-        case fileName
+        case fileName = "file_path"
         case duration
-        case createdAt
-        case transcription
+        case createdAt = "created_at"
+        case transcription = "transcript"
         case summary
         case fileURL
+        case fileSize = "file_size"
+        case status
     }
     
-    init(id: UUID = UUID(), title: String, fileName: String, duration: TimeInterval, createdAt: Date, transcription: String, summary: String, fileURL: URL?) {
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        // ID可能是UUID字符串
+        if let uuidString = try? container.decode(String.self, forKey: .id),
+           let uuid = UUID(uuidString: uuidString) {
+            self.id = uuid
+        } else {
+            self.id = UUID()
+        }
+        
+        title = try container.decode(String.self, forKey: .title)
+        fileName = try container.decode(String.self, forKey: .fileName)
+        duration = try container.decodeIfPresent(TimeInterval.self, forKey: .duration)
+        fileSize = try container.decodeIfPresent(Int.self, forKey: .fileSize)
+        status = try container.decodeIfPresent(String.self, forKey: .status)
+        
+        // 處理日期格式
+        let dateString = try container.decode(String.self, forKey: .createdAt)
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ"
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+        
+        if let date = dateFormatter.date(from: dateString) {
+            self.createdAt = date
+        } else {
+            // 嘗試另一種日期格式
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ"
+            if let date = dateFormatter.date(from: dateString) {
+                self.createdAt = date
+            } else {
+                self.createdAt = Date()
+                print("⚠️ 無法解析日期: \(dateString)")
+            }
+        }
+        
+        // 處理可空字段
+        transcription = try container.decodeIfPresent(String.self, forKey: .transcription)
+        summary = try container.decodeIfPresent(String.self, forKey: .summary)
+        fileURL = nil // API 不返回完整URL，需要在顯示時構建
+    }
+    
+    init(id: UUID = UUID(), title: String, fileName: String, duration: TimeInterval? = nil, createdAt: Date, transcription: String? = nil, summary: String? = nil, fileURL: URL? = nil, fileSize: Int? = nil, status: String? = nil) {
         self.id = id
         self.title = title
         self.fileName = fileName
@@ -30,12 +77,28 @@ struct Recording: Identifiable, Codable {
         self.transcription = transcription
         self.summary = summary
         self.fileURL = fileURL
+        self.fileSize = fileSize
+        self.status = status
     }
     
     var formattedDuration: String {
+        guard let duration = duration else { return "未知" }
         let minutes = Int(duration) / 60
         let seconds = Int(duration) % 60
         return String(format: "%02d:%02d", minutes, seconds)
+    }
+    
+    var formattedFileSize: String {
+        guard let size = fileSize else { return "未知" }
+        
+        let kb = Double(size) / 1024.0
+        let mb = kb / 1024.0
+        
+        if mb >= 1.0 {
+            return String(format: "%.1f MB", mb)
+        } else {
+            return String(format: "%.0f KB", kb)
+        }
     }
     
     var formattedDate: String {
@@ -45,9 +108,27 @@ struct Recording: Identifiable, Codable {
         formatter.locale = Locale(identifier: "zh_TW")
         return formatter.string(from: createdAt)
     }
+    
+    var statusText: String {
+        guard let status = status else { return "未知" }
+        
+        switch status.lowercased() {
+        case "completed":
+            return "已完成"
+        case "processing":
+            return "處理中"
+        case "failed":
+            return "失敗"
+        case "pending":
+            return "等待中"
+        default:
+            return status
+        }
+    }
 }
 
-struct User: Identifiable, Codable {
+// 重命名為 UserProfile 以避免和 Models/User.swift 中的 User 結構體衝突
+struct UserProfile: Identifiable, Codable {
     let id: String
     let username: String
     let email: String

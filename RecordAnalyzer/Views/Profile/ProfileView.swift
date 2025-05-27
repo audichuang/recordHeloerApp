@@ -217,7 +217,7 @@ struct ProfileView: View {
     }
     
     private var totalDuration: String {
-        let total = recordingManager.recordings.reduce(0) { $0 + $1.duration }
+        let total = recordingManager.recordings.reduce(0.0) { $0 + ($1.duration ?? 0.0) }
         let hours = Int(total) / 3600
         let minutes = Int(total) % 3600 / 60
         if hours > 0 {
@@ -229,7 +229,7 @@ struct ProfileView: View {
     
     private var averageDuration: String {
         guard !recordingManager.recordings.isEmpty else { return "0分" }
-        let average = recordingManager.recordings.reduce(0) { $0 + $1.duration } / Double(recordingManager.recordings.count)
+        let average = recordingManager.recordings.reduce(0.0) { $0 + ($1.duration ?? 0.0) } / Double(recordingManager.recordings.count)
         let minutes = Int(average) / 60
         return String(format: "%d分", minutes)
     }

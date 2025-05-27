@@ -56,6 +56,11 @@ struct RecordingDetailView: View {
             HStack(spacing: 20) {
                 InfoItem(icon: "clock", title: "時長", value: recording.formattedDuration)
                 InfoItem(icon: "calendar", title: "日期", value: recording.formattedDate)
+                InfoItem(icon: "doc", title: "大小", value: recording.formattedFileSize)
+                if let status = recording.status {
+                    InfoItem(icon: statusIcon, title: "狀態", value: recording.statusText)
+                        .foregroundColor(statusColor)
+                }
             }
         }
         .padding()
@@ -110,13 +115,22 @@ struct RecordingDetailView: View {
                     Spacer()
                 }
                 
-                Text(recording.transcription)
-                    .font(.body)
-                    .lineSpacing(6)
-                    .textSelection(.enabled)
-                    .padding()
-                    .background(Color.gray.opacity(0.05))
-                    .cornerRadius(12)
+                if let transcription = recording.transcription, !transcription.isEmpty {
+                    Text(transcription)
+                        .font(.body)
+                        .lineSpacing(6)
+                        .textSelection(.enabled)
+                        .padding()
+                        .background(Color.gray.opacity(0.05))
+                        .cornerRadius(12)
+                } else {
+                    notAvailableMessage(
+                        title: "逐字稿尚未生成",
+                        message: "該錄音的逐字稿尚未生成或處理中，請稍後再查看。",
+                        icon: "doc.text.magnifyingglass",
+                        color: .blue
+                    )
+                }
             }
             .padding()
         }
@@ -134,31 +148,64 @@ struct RecordingDetailView: View {
                     Spacer()
                 }
                 
-                Text(recording.summary)
-                    .font(.body)
-                    .lineSpacing(6)
-                    .textSelection(.enabled)
-                    .padding()
-                    .background(Color.green.opacity(0.05))
-                    .cornerRadius(12)
-                
-                // 統計資訊
-                VStack(spacing: 12) {
-                    HStack {
-                        Text("分析統計")
-                            .font(.headline)
-                            .fontWeight(.bold)
-                        Spacer()
-                    }
+                if let summary = recording.summary, !summary.isEmpty {
+                    Text(summary)
+                        .font(.body)
+                        .lineSpacing(6)
+                        .textSelection(.enabled)
+                        .padding()
+                        .background(Color.green.opacity(0.05))
+                        .cornerRadius(12)
                     
-                    HStack(spacing: 16) {
-                        StatCard(title: "字數", value: "\(recording.transcription.count)", icon: "textformat.123")
-                        StatCard(title: "段落", value: "\(recording.summary.components(separatedBy: "\n").count)", icon: "list.number")
+                    // 統計資訊
+                    if let transcription = recording.transcription, !transcription.isEmpty {
+                        VStack(spacing: 12) {
+                            HStack {
+                                Text("分析統計")
+                                    .font(.headline)
+                                    .fontWeight(.bold)
+                                Spacer()
+                            }
+                            
+                            HStack(spacing: 16) {
+                                StatCard(title: "字數", value: "\(transcription.count)", icon: "textformat.123")
+                                StatCard(title: "段落", value: "\(summary.components(separatedBy: "\n").count)", icon: "list.number")
+                            }
+                        }
                     }
+                } else {
+                    notAvailableMessage(
+                        title: "摘要尚未生成",
+                        message: "該錄音的智能摘要尚未生成或處理中，請稍後再查看。",
+                        icon: "doc.text.viewfinder",
+                        color: .green
+                    )
                 }
             }
             .padding()
         }
+    }
+    
+    private func notAvailableMessage(title: String, message: String, icon: String, color: Color) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: icon)
+                .font(.system(size: 60))
+                .foregroundColor(color)
+            
+            Text(title)
+                .font(.headline)
+                .fontWeight(.bold)
+            
+            Text(message)
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 50)
+        .padding(.horizontal)
+        .background(color.opacity(0.05))
+        .cornerRadius(12)
     }
     
     private var shareButton: some View {
@@ -171,9 +218,43 @@ struct RecordingDetailView: View {
             ShareSheet(activityItems: [
                 "錄音分析結果",
                 "標題: \(recording.title)",
-                "逐字稿: \(recording.transcription)",
-                "摘要: \(recording.summary)"
+                "逐字稿: \(recording.transcription ?? "尚未生成")",
+                "摘要: \(recording.summary ?? "尚未生成")"
             ])
+        }
+    }
+    
+    private var statusIcon: String {
+        guard let status = recording.status else { return "questionmark.circle" }
+        
+        switch status.lowercased() {
+        case "completed":
+            return "checkmark.circle"
+        case "processing":
+            return "gear"
+        case "failed":
+            return "exclamationmark.triangle"
+        case "pending":
+            return "clock"
+        default:
+            return "questionmark.circle"
+        }
+    }
+    
+    private var statusColor: Color {
+        guard let status = recording.status else { return .gray }
+        
+        switch status.lowercased() {
+        case "completed":
+            return .green
+        case "processing":
+            return .orange
+        case "failed":
+            return .red
+        case "pending":
+            return .blue
+        default:
+            return .gray
         }
     }
 }
@@ -246,7 +327,9 @@ struct ShareSheet: UIViewControllerRepresentable {
             createdAt: Date(),
             transcription: "今天的會議主要討論了項目的進度情況。我們已經完成了第一階段的開發工作，目前正在進行測試階段。預計下週可以完成所有測試工作，然後進入第二階段的開發。在討論過程中，我們也識別了一些潛在的風險和挑戰，需要在接下來的工作中特別注意。團隊成員都表示對目前的進度感到滿意，並且對後續的工作安排有清晰的了解。",
             summary: "會議摘要：討論項目進度，第一階段開發完成，正在測試中，預計下週完成測試並進入第二階段。識別了風險和挑戰，團隊對進度滿意。",
-            fileURL: nil
+            fileURL: nil,
+            fileSize: 2048000,
+            status: "completed"
         ))
     }
 } 

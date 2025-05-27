@@ -25,6 +25,12 @@ struct HistoryView: View {
             .refreshable {
                 await recordingManager.loadRecordings()
             }
+            .onAppear {
+                // 確保每次視圖出現時都從後端加載最新的錄音數據
+                Task {
+                    await recordingManager.loadRecordings()
+                }
+            }
         }
     }
     
@@ -131,7 +137,7 @@ struct HistoryView: View {
             recordingManager.recordings.filter { recording in
                 recording.title.localizedCaseInsensitiveContains(searchText) ||
                 recording.fileName.localizedCaseInsensitiveContains(searchText) ||
-                recording.transcription.localizedCaseInsensitiveContains(searchText)
+                (recording.transcription?.localizedCaseInsensitiveContains(searchText) ?? false)
             }
         
         return filtered.sorted { first, second in
@@ -143,7 +149,15 @@ struct HistoryView: View {
             case .titleAscending:
                 return first.title < second.title
             case .durationDescending:
-                return first.duration > second.duration
+                if let firstDuration = first.duration, let secondDuration = second.duration {
+                    return firstDuration > secondDuration
+                } else if first.duration != nil {
+                    return true
+                } else if second.duration != nil {
+                    return false
+                } else {
+                    return false
+                }
             }
         }
     }

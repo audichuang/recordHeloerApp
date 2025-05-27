@@ -103,12 +103,17 @@ class RecordingManager: ObservableObject {
     }
     
     func loadRecordings() async {
+        print("🔄 開始加載錄音列表...")
         isLoading = true
         errorMessage = nil
         
         do {
             // 先嘗試從網路載入
+            print("📡 嘗試從網路加載錄音列表...")
             let networkRecordings = try await networkService.getRecordings()
+            print("✅ 從網路成功加載了 \(networkRecordings.count) 個錄音")
+            
+            // 更新UI
             self.recordings = networkRecordings
             
             // 更新本地存儲
@@ -116,18 +121,29 @@ class RecordingManager: ObservableObject {
             for recording in networkRecordings {
                 await dataStore.saveRecording(recording)
             }
+            print("💾 已將網路數據保存到本地存儲")
             
             isLoading = false
-        } catch {
+        } catch let error as NetworkError {
+            print("❌ 網路加載失敗: \(error.localizedDescription)")
+            
             // 如果網路失敗，嘗試從本地存儲載入
-            print("從網路載入錄音失敗: \(error.localizedDescription)。嘗試從本地載入...")
+            print("📂 嘗試從本地存儲加載錄音...")
             let savedRecordings = await dataStore.loadRecordings()
+            
             if !savedRecordings.isEmpty {
+                print("📋 從本地存儲加載了 \(savedRecordings.count) 個錄音")
                 recordings = savedRecordings
                 errorMessage = "無法連接伺服器，顯示本地快取資料。"
             } else {
+                print("⚠️ 本地存儲中沒有錄音數據")
                 errorMessage = "載入錄音失敗：\(error.localizedDescription)"
             }
+            
+            isLoading = false
+        } catch {
+            print("❌ 未知錯誤: \(error.localizedDescription)")
+            errorMessage = "載入錄音失敗：\(error.localizedDescription)"
             isLoading = false
         }
     }

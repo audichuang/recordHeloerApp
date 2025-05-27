@@ -5,13 +5,27 @@ struct RecordingRowView: View {
     
     var body: some View {
         HStack(spacing: 16) {
-            // 圖標
-            Image(systemName: "waveform")
-                .font(.system(size: 24))
-                .foregroundColor(.blue)
-                .frame(width: 40, height: 40)
-                .background(Color.blue.opacity(0.1))
-                .cornerRadius(8)
+            // 圖標和狀態
+            ZStack {
+                Image(systemName: "waveform")
+                    .font(.system(size: 24))
+                    .foregroundColor(.blue)
+                    .frame(width: 40, height: 40)
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(8)
+                
+                if let status = recording.status, status.lowercased() != "completed" {
+                    VStack {
+                        Spacer()
+                        Text(recording.statusText)
+                            .font(.system(size: 8))
+                            .padding(2)
+                            .background(statusColor)
+                            .foregroundColor(.white)
+                            .cornerRadius(4)
+                    }
+                }
+            }
             
             // 錄音資訊
             VStack(alignment: .leading, spacing: 4) {
@@ -33,10 +47,9 @@ struct RecordingRowView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
-                    Text(recording.fileName)
+                    Text(recording.formattedFileSize)
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        .lineLimit(1)
                 }
             }
             
@@ -51,6 +64,23 @@ struct RecordingRowView: View {
         .background(Color.gray.opacity(0.05))
         .cornerRadius(12)
     }
+    
+    private var statusColor: Color {
+        guard let status = recording.status else { return .gray }
+        
+        switch status.lowercased() {
+        case "completed":
+            return .green
+        case "processing":
+            return .orange
+        case "failed":
+            return .red
+        case "pending":
+            return .blue
+        default:
+            return .gray
+        }
+    }
 }
 
 #Preview {
@@ -62,7 +92,9 @@ struct RecordingRowView: View {
             createdAt: Date(),
             transcription: "這是測試逐字稿...",
             summary: "這是測試摘要...",
-            fileURL: nil
+            fileURL: nil,
+            fileSize: 1024 * 1024,
+            status: "completed"
         ))
         
         RecordingRowView(recording: Recording(
@@ -72,7 +104,21 @@ struct RecordingRowView: View {
             createdAt: Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date(),
             transcription: "這是測試逐字稿...",
             summary: "這是測試摘要...",
-            fileURL: nil
+            fileURL: nil,
+            fileSize: 512 * 1024,
+            status: "processing"
+        ))
+        
+        RecordingRowView(recording: Recording(
+            title: "失敗的錄音",
+            fileName: "failed.wav",
+            duration: nil,
+            createdAt: Calendar.current.date(byAdding: .day, value: -2, to: Date()) ?? Date(),
+            transcription: nil,
+            summary: nil,
+            fileURL: nil,
+            fileSize: 256 * 1024,
+            status: "failed"
         ))
     }
     .padding()

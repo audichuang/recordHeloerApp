@@ -46,7 +46,18 @@ class NetworkService: ObservableObject {
     private let baseURL = "https://api.recordhelper.com/api"
     #endif
     
-    private let session = URLSession.shared
+    private lazy var session: URLSession = {
+        let config = URLSessionConfiguration.default
+        // 確保重定向時保留原始請求的所有標頭（包括授權標頭）
+        config.httpShouldSetCookies = true
+        config.httpCookieAcceptPolicy = .always
+        config.httpCookieStorage = HTTPCookieStorage.shared
+        config.httpShouldUsePipelining = true
+        // 重要：這將確保授權標頭在重定向時被保留
+        config.httpMaximumConnectionsPerHost = 10
+        
+        return URLSession(configuration: config)
+    }()
     
     @Published var isConnected = false
     
@@ -58,15 +69,40 @@ class NetworkService: ObservableObject {
     
     // MARK: - Token Management
     private func getAuthToken() -> String? {
-        return UserDefaults.standard.string(forKey: "auth_token")
+        // 先嘗試從 keychain 或 UserDefaults 獲取令牌
+        if let token = UserDefaults.standard.string(forKey: "auth_token") {
+            return token
+        }
+        
+        // 如果未找到，嘗試從保存的用戶對象中獲取
+        if let userData = UserDefaults.standard.data(forKey: "savedUser") {
+            do {
+                let user = try JSONDecoder().decode(User.self, from: userData)
+                if let token = user.accessToken {
+                    // 找到令牌後，更新到標準位置
+                    UserDefaults.standard.set(token, forKey: "auth_token")
+                    return token
+                }
+            } catch {
+                print("⚠️ 無法解析保存的用戶數據: \(error.localizedDescription)")
+            }
+        }
+        
+        print("⚠️ 無法獲取授權令牌")
+        return nil
     }
     
     private func saveAuthToken(_ token: String) {
+        print("💾 保存授權令牌: Bearer \(String(token.prefix(10)))...")
         UserDefaults.standard.set(token, forKey: "auth_token")
+        UserDefaults.standard.synchronize()
     }
     
     private func clearAuthToken() {
+        print("🗑️ 清除授權令牌")
         UserDefaults.standard.removeObject(forKey: "auth_token")
+        UserDefaults.standard.removeObject(forKey: "refresh_token")
+        UserDefaults.standard.synchronize()
     }
     
     // MARK: - Request Building
@@ -84,9 +120,19 @@ class NetworkService: ObservableObject {
         request.httpMethod = method.rawValue
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        if requiresAuth, let token = getAuthToken() {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        // 添加授權標頭
+        if requiresAuth {
+            if let token = getAuthToken() {
+                let authHeader = "Bearer \(token)"
+                request.setValue(authHeader, forHTTPHeaderField: "Authorization")
+                print("🔑 添加授權標頭: Bearer \(String(token.prefix(10)))...")
+            } else {
+                print("⚠️ 警告: 需要授權但找不到有效的令牌")
+            }
         }
+        
+        // 設置URLRequest以跟隨重定向並保留授權標頭
+        request.httpShouldHandleCookies = true
         
         if let body = body {
             request.httpBody = body
@@ -109,47 +155,84 @@ class NetworkService: ObservableObject {
             body: body,
             requiresAuth: requiresAuth
         ) else {
+            print("⚠️ 無效的URL: \(baseURL)\(endpoint)")
             throw NetworkError.invalidURL
+        }
+        
+        print("📡 發送請求: \(method.rawValue) \(request.url?.absoluteString ?? "unknown")")
+        if requiresAuth {
+            print("🔐 請求包含授權標頭: \(request.value(forHTTPHeaderField: "Authorization") != nil ? "是" : "否")")
         }
         
         do {
             let (data, response) = try await session.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
+                print("❌ 無效的HTTP回應")
                 throw NetworkError.invalidResponse
             }
             
-            print("API Response [\(endpoint)]: \(httpResponse.statusCode)")
+            print("📊 API回應 [\(endpoint)]: \(httpResponse.statusCode)")
+            
+            // 如果是重定向，顯示重定向信息
+            if (300...399).contains(httpResponse.statusCode) {
+                if let location = httpResponse.value(forHTTPHeaderField: "Location") {
+                    print("⚠️ 被重定向到: \(location)")
+                }
+            }
             
             // 調試: 打印接收到的 JSON 數據
             if let jsonString = String(data: data, encoding: .utf8) {
-                print("收到的 JSON 數據: \(jsonString)")
+                let trimmedJSON = jsonString.count > 500 ? "\(jsonString.prefix(500))..." : jsonString
+                print("📄 收到的JSON數據: \(trimmedJSON)")
             }
             
             switch httpResponse.statusCode {
             case 200...299:
                 do {
-                    return try JSONDecoder().decode(T.self, from: data)
+                    let decoder = JSONDecoder()
+                    let dateFormatter = DateFormatter()
+                    dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+                    decoder.dateDecodingStrategy = .formatted(dateFormatter)
+                    
+                    return try decoder.decode(T.self, from: data)
                 } catch {
-                    print("JSON 解碼錯誤: \(error)")
+                    print("❌ JSON解碼錯誤: \(error)")
+                    if let jsonString = String(data: data, encoding: .utf8) {
+                        print("🔍 嘗試解碼: \(jsonString)")
+                    }
                     throw NetworkError.decodingError
                 }
             case 401:
+                print("🔒 未授權(401): 清除授權令牌")
                 clearAuthToken()
                 throw NetworkError.unauthorized
-            case 400...499:
-                if let errorResponse = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
-                    throw NetworkError.apiError(errorResponse.message ?? "客戶端錯誤")
+            case 403:
+                print("🚫 拒絕訪問(403): 請確認用戶權限")
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("📄 錯誤詳情: \(jsonString)")
                 }
-                throw NetworkError.clientError(httpResponse.statusCode)
+                throw NetworkError.apiError("拒絕訪問，請確認您的帳號權限")
+            case 400...499:
+                do {
+                    let errorResponse = try JSONDecoder().decode(APIErrorResponse.self, from: data)
+                    print("⚠️ API錯誤: \(errorResponse.message ?? "未知錯誤")")
+                    throw NetworkError.apiError(errorResponse.message ?? "客戶端錯誤")
+                } catch {
+                    print("⚠️ 客戶端錯誤(\(httpResponse.statusCode))")
+                    throw NetworkError.clientError(httpResponse.statusCode)
+                }
             case 500...599:
+                print("⚠️ 伺服器錯誤(\(httpResponse.statusCode))")
                 throw NetworkError.serverError(httpResponse.statusCode)
             default:
+                print("⚠️ 未知錯誤狀態碼: \(httpResponse.statusCode)")
                 throw NetworkError.unknownError
             }
         } catch let error as NetworkError {
             throw error
         } catch {
+            print("❌ 網路錯誤: \(error.localizedDescription)")
             throw NetworkError.networkError(error.localizedDescription)
         }
     }
@@ -208,7 +291,19 @@ class NetworkService: ObservableObject {
         // 記錄成功登入
         print("登入成功: 用戶名 = \(response.user.username)")
         
-        return response.user
+        // 修改用戶實例，添加令牌
+        var mutableUser = response.user
+        mutableUser.accessToken = response.accessToken
+        mutableUser.refreshToken = response.refreshToken
+        
+        // 將完整用戶對象（包含令牌）保存到 UserDefaults
+        if let userData = try? JSONEncoder().encode(mutableUser) {
+            UserDefaults.standard.set(userData, forKey: "savedUser")
+            UserDefaults.standard.synchronize()
+            print("📝 保存用戶數據（包含令牌）到 UserDefaults")
+        }
+        
+        return mutableUser
     }
     
     func logout() async throws {
@@ -232,11 +327,23 @@ class NetworkService: ObservableObject {
     
     // MARK: - Recordings APIs
     func getRecordings() async throws -> [Recording] {
+        print("🔍 開始從API獲取錄音列表...")
+        // 確保端點包含尾部斜線，避免重定向
+        print("🔗 API端點: \(baseURL)/recordings/")
+        
+        if let token = getAuthToken() {
+            print("🔑 使用授權令牌: Bearer \(String(token.prefix(10)))...")
+        } else {
+            print("⚠️ 警告: 沒有授權令牌，API請求可能失敗")
+        }
+        
         let response: RecordingsResponse = try await performRequest(
-            endpoint: "/recordings",
+            endpoint: "/recordings/", // 修正：添加尾部斜線
             requiresAuth: true,
             responseType: RecordingsResponse.self
         )
+        
+        print("📊 成功獲取 \(response.recordings.count) 個錄音記錄")
         return response.recordings
     }
     
@@ -255,7 +362,8 @@ class NetworkService: ObservableObject {
             throw NetworkError.apiError("文件大小無效或超過100MB限制")
         }
         
-        // 3. 建立請求
+        // 3. 建立請求 - 直接使用正確的最終URL，避免重定向
+        // 根據後端日誌，最終URL不包含尾部斜線
         guard let uploadURL = URL(string: "\(baseURL)/recordings/upload") else {
             print("⚠️ 錯誤: 無效的URL")
             throw NetworkError.invalidURL
@@ -277,6 +385,17 @@ class NetworkService: ObservableObject {
         } else {
             print("⚠️ 警告: 未提供授權令牌")
         }
+        
+        // 關鍵設置：禁止自動處理重定向
+        request.httpShouldHandleCookies = true
+        
+        // 自定義標頭以增強調試能力
+        request.setValue("iOS-App/1.0", forHTTPHeaderField: "User-Agent")
+        request.setValue("XMLHttpRequest", forHTTPHeaderField: "X-Requested-With")
+        request.setValue("*/*", forHTTPHeaderField: "Accept")
+        
+        // 明確告訴服務器保持連接開啟
+        request.setValue("keep-alive", forHTTPHeaderField: "Connection")
         
         // 測試資源本地化
         let didStartAccessing = fileURL.startAccessingSecurityScopedResource()
@@ -368,8 +487,32 @@ class NetworkService: ObservableObject {
                 
                 print("📤 開始發送請求...")
                 
-                // 現在使用文件形式上傳
-                let task = session.uploadTask(with: request, fromFile: tempFileURL) { data, response, error in
+                // 直接使用委託模式避免在task初始化前使用
+                let delegate = UploadDelegate(authToken: getAuthToken())
+                
+                // 創建自定義配置，禁用重定向
+                let sessionConfig = URLSessionConfiguration.default
+                sessionConfig.httpShouldUsePipelining = true
+                sessionConfig.httpMaximumConnectionsPerHost = 10
+                sessionConfig.timeoutIntervalForRequest = 180.0 // 增加超時
+                sessionConfig.httpShouldSetCookies = true
+                sessionConfig.httpCookieAcceptPolicy = .always
+                sessionConfig.waitsForConnectivity = true // 增加連接穩定性
+                
+                // 添加授權標頭
+                if let token = getAuthToken() {
+                    var headers = sessionConfig.httpAdditionalHeaders ?? [:]
+                    headers["Authorization"] = "Bearer \(token)"
+                    sessionConfig.httpAdditionalHeaders = headers
+                }
+                
+                let uploadSession = URLSession(configuration: sessionConfig, delegate: delegate, delegateQueue: nil)
+                
+                // 使用委託創建上傳任務，委託將處理請求的回調
+                let task = uploadSession.uploadTask(with: request, fromFile: tempFileURL)
+                
+                // 設置完成處理程序
+                delegate.completionHandler = { (data: Data?, response: URLResponse?, error: Error?) in
                     // 釋放安全訪問
                     if didStartAccessing {
                         fileURL.stopAccessingSecurityScopedResource()
@@ -380,6 +523,15 @@ class NetworkService: ObservableObject {
                     
                     if let error = error {
                         print("❌ 上傳錯誤: \(error.localizedDescription)")
+                        
+                        // 添加更詳細的錯誤信息
+                        if let nsError = error as NSError? {
+                            print("🔍 錯誤代碼: \(nsError.code), 域: \(nsError.domain)")
+                            if let failingURL = nsError.userInfo[NSURLErrorFailingURLStringErrorKey] as? String {
+                                print("🔗 失敗URL: \(failingURL)")
+                            }
+                        }
+                        
                         continuation.resume(throwing: NetworkError.networkError(error.localizedDescription))
                         return
                     }
@@ -391,6 +543,35 @@ class NetworkService: ObservableObject {
                     }
                     
                     print("📡 收到HTTP狀態碼: \(httpResponse.statusCode)")
+                    
+                    // 輸出所有響應頭
+                    print("📝 響應頭:")
+                    for (key, value) in httpResponse.allHeaderFields {
+                        print("   \(key): \(value)")
+                    }
+                    
+                    // 判斷如果是403錯誤
+                    if httpResponse.statusCode == 403 {
+                        print("🔒 收到403 Forbidden響應")
+                        
+                        // 檢查原始請求和當前請求的授權標頭
+                        print("🔍 403錯誤詳細診斷:")
+                        print("   原始請求URL: \(task.originalRequest?.url?.absoluteString ?? "未知")")
+                        print("   當前請求URL: \(task.currentRequest?.url?.absoluteString ?? "未知")")
+                        
+                        // 檢查授權標頭
+                        if let originalAuth = task.originalRequest?.value(forHTTPHeaderField: "Authorization") {
+                            print("   原始請求授權標頭: \(originalAuth.prefix(15))...")
+                        } else {
+                            print("   ⚠️ 原始請求沒有授權標頭!")
+                        }
+                        
+                        if let currentAuth = task.currentRequest?.value(forHTTPHeaderField: "Authorization") {
+                            print("   當前請求授權標頭: \(currentAuth.prefix(15))...")
+                        } else {
+                            print("   ⚠️ 當前請求沒有授權標頭!")
+                        }
+                    }
                     
                     guard let data = data else {
                         print("❌ 沒有回應數據")
@@ -407,7 +588,8 @@ class NetworkService: ObservableObject {
                         switch httpResponse.statusCode {
                         case 200...299:
                             // 嘗試解碼為 UploadResponse
-                            if let uploadResponse = try? JSONDecoder().decode(UploadResponse.self, from: data) {
+                            do {
+                                let uploadResponse = try JSONDecoder().decode(UploadResponse.self, from: data)
                                 print("✅ 上傳成功: \(uploadResponse.message), ID: \(uploadResponse.recording_id)")
                                 
                                 // 創建一個臨時的 Recording 對象
@@ -422,11 +604,17 @@ class NetworkService: ObservableObject {
                                     fileURL: fileURL
                                 )
                                 continuation.resume(returning: tempRecording)
-                            } else {
-                                // 如果無法解析為 UploadResponse，也可能直接返回 Recording
-                                let decoder = JSONDecoder()
-                                let recording = try decoder.decode(Recording.self, from: data)
-                                continuation.resume(returning: recording)
+                            } catch {
+                                // 如果無法解析為 UploadResponse，嘗試直接返回 Recording
+                                print("❌ 無法解析為 UploadResponse: \(error.localizedDescription)")
+                                do {
+                                    let decoder = JSONDecoder()
+                                    let recording = try decoder.decode(Recording.self, from: data)
+                                    continuation.resume(returning: recording)
+                                } catch {
+                                    print("❌ 無法解析為 Recording: \(error.localizedDescription)")
+                                    continuation.resume(throwing: NetworkError.decodingError)
+                                }
                             }
                         case 401:
                             print("🔒 未授權(401): 令牌可能無效")
@@ -436,10 +624,11 @@ class NetworkService: ObservableObject {
                             continuation.resume(throwing: NetworkError.unauthorized)
                         case 422:
                             // 特別處理不可處理內容錯誤
-                            if let errorResponse = try? JSONDecoder().decode(APIErrorResponse.self, from: data) {
+                            do {
+                                let errorResponse = try JSONDecoder().decode(APIErrorResponse.self, from: data)
                                 print("⚠️ 上傳格式錯誤(422): \(errorResponse.message ?? "未知錯誤")")
                                 continuation.resume(throwing: NetworkError.apiError(errorResponse.message ?? "上傳文件格式錯誤"))
-                            } else {
+                            } catch {
                                 print("⚠️ 上傳格式錯誤(422): 文件格式或內容不符合要求")
                                 continuation.resume(throwing: NetworkError.apiError("文件格式或內容不符合要求"))
                             }
@@ -453,11 +642,19 @@ class NetworkService: ObservableObject {
                     }
                 }
                 
-                // 添加進度監控
+                // 將代理分配給任務
+                URLSession.shared.delegateQueue.addOperation {
+                    task.delegate = delegate
+                }
+                
+                // 添加進度監控，直接使用 onProgress 而不是 ProgressHandlerRef
+                // 使用弱引用避免循環引用
                 let uploadProgressObserver = task.progress.observe(\.fractionCompleted) { progress, _ in
+                    let progressValue = progress.fractionCompleted
+                    
                     DispatchQueue.main.async {
-                        print("📊 上傳進度: \(Int(progress.fractionCompleted * 100))%")
-                        onProgress(progress.fractionCompleted)
+                        print("📊 上傳進度: \(Int(progressValue * 100))%")
+                        onProgress(progressValue)
                     }
                 }
                 
@@ -486,12 +683,14 @@ class NetworkService: ObservableObject {
     }
     
     func deleteRecording(id: UUID) async throws {
+        print("🗑️ 嘗試刪除錄音: \(id.uuidString)")
         let _: EmptyResponse = try await performRequest(
-            endpoint: "/recordings/\(id.uuidString)",
+            endpoint: "/recordings/\(id.uuidString)/", // 添加尾部斜線
             method: .DELETE,
             requiresAuth: true,
             responseType: EmptyResponse.self
         )
+        print("✅ 成功刪除錄音: \(id.uuidString)")
     }
     
     // MARK: - Helper Methods
@@ -593,5 +792,63 @@ struct UploadResponse: Codable {
         case message
         case recording_id
         case status
+    }
+}
+
+// MARK: - Upload Delegate
+class UploadDelegate: NSObject, URLSessionTaskDelegate, URLSessionDataDelegate, @unchecked Sendable {
+    let authToken: String?
+    
+    init(authToken: String?) {
+        self.authToken = authToken
+        super.init()
+    }
+    
+    var completionHandler: ((Data?, URLResponse?, Error?) -> Void)?
+    private var receivedData: Data?
+    
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+        print("🔄 正在處理重定向: \(response.statusCode) -> \(request.url?.absoluteString ?? "unknown")")
+        
+        // 創建新請求，複製原始請求的所有標頭
+        var newReq = request
+        
+        // 複製原始請求的標頭
+        if let originalRequest = task.originalRequest {
+            for (headerField, headerValue) in originalRequest.allHTTPHeaderFields ?? [:] {
+                newReq.setValue(headerValue, forHTTPHeaderField: headerField)
+            }
+        }
+        
+        // 確保授權標頭存在
+        if let token = self.authToken, newReq.value(forHTTPHeaderField: "Authorization") == nil {
+            newReq.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            print("🔑 重定向後重新添加授權標頭")
+        }
+        
+        print("📋 重定向後的請求標頭:")
+        for (key, value) in newReq.allHTTPHeaderFields ?? [:] {
+            print("   \(key): \(String(value.prefix(key == "Authorization" ? 15 : 30)))...")
+        }
+        
+        completionHandler(newReq)
+    }
+    
+    // 處理數據任務收到響應
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+        print("📥 收到響應: \(response)")
+        receivedData = Data()
+        completionHandler(.allow)
+    }
+    
+    // 處理接收到的數據
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        receivedData?.append(data)
+    }
+    
+    // 處理任務完成
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        print("🏁 任務完成")
+        completionHandler?(receivedData, task.response, error)
     }
 } 

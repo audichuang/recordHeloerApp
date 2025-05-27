@@ -40,6 +40,12 @@ struct HomeView: View {
             .refreshable {
                 await recordingManager.loadRecordings()
             }
+            .onAppear {
+                // 確保每次視圖出現時都從後端加載最新的錄音數據
+                Task {
+                    await recordingManager.loadRecordings()
+                }
+            }
         }
         .fileImporter(
             isPresented: $showingFilePicker,
