@@ -1,6 +1,178 @@
 import Foundation
 
-struct Recording: Identifiable, Codable {
+/// 輕量級錄音摘要結構，用於列表顯示和性能優化
+struct RecordingSummary: Identifiable, Codable, Equatable {
+    var id: UUID
+    let title: String
+    let duration: TimeInterval?
+    let fileSize: Int?
+    let status: String?
+    let createdAt: Date
+    let hasTranscript: Bool
+    let hasSummary: Bool
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case duration
+        case fileSize = "file_size"
+        case status
+        case createdAt = "created_at"
+        case hasTranscript = "has_transcript"
+        case hasSummary = "has_summary"
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        // ID可能是UUID字符串
+        if let uuidString = try? container.decode(String.self, forKey: .id),
+           let uuid = UUID(uuidString: uuidString) {
+            self.id = uuid
+        } else {
+            self.id = UUID()
+        }
+        
+        title = try container.decode(String.self, forKey: .title)
+        duration = try container.decodeIfPresent(TimeInterval.self, forKey: .duration)
+        fileSize = try container.decodeIfPresent(Int.self, forKey: .fileSize)
+        status = try container.decodeIfPresent(String.self, forKey: .status)
+        hasTranscript = try container.decodeIfPresent(Bool.self, forKey: .hasTranscript) ?? false
+        hasSummary = try container.decodeIfPresent(Bool.self, forKey: .hasSummary) ?? false
+        
+        // 處理日期格式
+        let dateString = try container.decode(String.self, forKey: .createdAt)
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ"
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+        
+        if let date = dateFormatter.date(from: dateString) {
+            self.createdAt = date
+        } else {
+            // 嘗試另一種日期格式
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ"
+            if let date = dateFormatter.date(from: dateString) {
+                self.createdAt = date
+            } else {
+                self.createdAt = Date()
+                print("⚠️ 無法解析日期: \(dateString)")
+            }
+        }
+    }
+    
+    /// 轉換為完整的Recording對象，用於詳情顯示
+    func toRecording() -> Recording {
+        return Recording(
+            id: id,
+            title: title,
+            originalFilename: title + ".m4a", // 暫時使用標題作為文件名
+            format: "m4a",
+            mimeType: "audio/m4a",
+            duration: duration,
+            createdAt: createdAt,
+            transcription: hasTranscript ? "可用" : nil,
+            summary: hasSummary ? "可用" : nil,
+            fileURL: nil,
+            fileSize: fileSize,
+            status: status
+        )
+    }
+    
+    // 格式化屬性
+    var formattedDuration: String {
+        guard let duration = duration, duration > 0 else { return "--:--" }
+        let totalSeconds = Int(duration)
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+    
+    var formattedFileSize: String {
+        guard let size = fileSize, size > 0 else { return "-- MB" }
+        
+        let kb = Double(size) / 1024.0
+        let mb = kb / 1024.0
+        
+        if mb >= 1.0 {
+            return String(format: "%.1f MB", mb)
+        } else if kb >= 1.0 {
+            return String(format: "%.0f KB", kb)
+        } else {
+            return "< 1 KB"
+        }
+    }
+    
+    var formattedDate: String {
+        let now = Date()
+        let calendar = Calendar.current
+        
+        // 檢查是否是今天
+        if calendar.isDateInToday(createdAt) {
+            let timeFormatter = DateFormatter()
+            timeFormatter.dateFormat = "HH:mm"
+            return "今天 \(timeFormatter.string(from: createdAt))"
+        }
+        
+        // 檢查是否是昨天
+        if calendar.isDateInYesterday(createdAt) {
+            let timeFormatter = DateFormatter()
+            timeFormatter.dateFormat = "HH:mm"
+            return "昨天 \(timeFormatter.string(from: createdAt))"
+        }
+        
+        // 檢查是否是本週
+        let daysSinceCreated = calendar.dateComponents([.day], from: createdAt, to: now).day ?? 0
+        if daysSinceCreated < 7 {
+            let dayFormatter = DateFormatter()
+            dayFormatter.dateFormat = "EEEE HH:mm"
+            dayFormatter.locale = Locale(identifier: "zh_TW")
+            return dayFormatter.string(from: createdAt)
+        }
+        
+        // 檢查是否是本年
+        if calendar.component(.year, from: createdAt) == calendar.component(.year, from: now) {
+            let monthFormatter = DateFormatter()
+            monthFormatter.dateFormat = "M月d日 HH:mm"
+            monthFormatter.locale = Locale(identifier: "zh_TW")
+            return monthFormatter.string(from: createdAt)
+        }
+        
+        // 其他情況顯示完整日期
+        let fullFormatter = DateFormatter()
+        fullFormatter.dateFormat = "yy年M月d日"
+        fullFormatter.locale = Locale(identifier: "zh_TW")
+        return fullFormatter.string(from: createdAt)
+    }
+    
+    var statusText: String {
+        guard let status = status else { return "未知" }
+        
+        switch status.lowercased() {
+        case "completed":
+            return "已完成"
+        case "processing":
+            return "處理中"
+        case "failed":
+            return "失敗"
+        case "pending":
+            return "等待中"
+        default:
+            return status
+        }
+    }
+    
+    // MARK: - Equatable 實現
+    static func == (lhs: RecordingSummary, rhs: RecordingSummary) -> Bool {
+        return lhs.id == rhs.id &&
+               lhs.title == rhs.title &&
+               lhs.status == rhs.status &&
+               lhs.hasTranscript == rhs.hasTranscript &&
+               lhs.hasSummary == rhs.hasSummary
+    }
+}
+
+struct Recording: Identifiable, Codable, Equatable {
     var id: UUID
     let title: String
     let originalFilename: String
@@ -174,6 +346,16 @@ struct Recording: Identifiable, Codable {
         default:
             return status
         }
+    }
+    
+    // MARK: - Equatable 實現
+    static func == (lhs: Recording, rhs: Recording) -> Bool {
+        return lhs.id == rhs.id &&
+               lhs.title == rhs.title &&
+               lhs.status == rhs.status &&
+               lhs.duration == rhs.duration &&
+               lhs.transcription == rhs.transcription &&
+               lhs.summary == rhs.summary
     }
 }
 

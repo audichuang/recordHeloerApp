@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		8A37A18A2DE6EA010045F096 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 8A37A1892DE6EA010045F096 /* MarkdownUI */; };
 		8A816D102DE597ED00F22D75 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A816D0E2DE597ED00F22D75 /* NetworkService.swift */; };
 		CE01 /* RecordAnalyzerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE02 /* RecordAnalyzerApp.swift */; };
 		CE03 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE04 /* ContentView.swift */; };
@@ -50,6 +51,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8A37A18A2DE6EA010045F096 /* MarkdownUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -227,6 +229,9 @@
 				Base,
 			);
 			mainGroup = CE31;
+			packageReferences = (
+				8A37A1882DE6EA010045F096 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
+			);
 			productRefGroup = CE33 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -403,50 +408,17 @@
 				DEVELOPMENT_TEAM = 37HFR5V2JJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDocumentTypes = (
-					{
-						CFBundleTypeExtensions = (
-							mp3,
-							wav,
-							m4a,
-							aac,
-							flac,
-							mp4,
-							ogg,
-						);
-						CFBundleTypeIconFiles = ();
-						CFBundleTypeName = "Audio Files";
-						CFBundleTypeRole = Editor;
-						LSHandlerRank = Owner;
-						LSItemContentTypes = (
-							"public.mp3",
-							"public.audio",
-							"com.apple.m4a-audio",
-							"public.aac-audio",
-							"public.mpeg-4-audio",
-							"org.xiph.flac",
-						);
-						LSTypeIsPackage = NO;
-					},
-				);
-				INFOPLIST_KEY_CFBundleURLTypes = (
-					{
-						CFBundleURLName = "錄音分析助手";
-						CFBundleURLSchemes = (
-							recordanalyzer,
-							recordanalyzer-files,
-						);
-					},
-				);
 				INFOPLIST_KEY_CFBundleDisplayName = "錄音分析助手";
+				INFOPLIST_KEY_CFBundleDocumentTypes = "{\n    CFBundleTypeExtensions =     (\n        mp3,\n        wav,\n        m4a,\n        aac,\n        flac,\n        mp4,\n        ogg\n    );\n    CFBundleTypeIconFiles =     (\n    );\n    CFBundleTypeName = \"Audio Files\";\n    CFBundleTypeRole = Editor;\n    LSHandlerRank = Owner;\n    LSItemContentTypes =     (\n        \"public.mp3\",\n        \"public.audio\",\n        \"com.apple.m4a-audio\",\n        \"public.aac-audio\",\n        \"public.mpeg-4-audio\",\n        \"org.xiph.flac\"\n    );\n    LSTypeIsPackage = NO;\n}";
 				INFOPLIST_KEY_CFBundleName = "錄音分析助手";
+				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleURLName = \"\\U9304\\U97f3\\U5206\\U6790\\U52a9\\U624b\";\n    CFBundleURLSchemes =     (\n        recordanalyzer,\n        \"recordanalyzer-files\"\n    );\n}";
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportsDocumentBrowser = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportsDocumentBrowser = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -471,50 +443,17 @@
 				DEVELOPMENT_TEAM = 37HFR5V2JJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDocumentTypes = (
-					{
-						CFBundleTypeExtensions = (
-							mp3,
-							wav,
-							m4a,
-							aac,
-							flac,
-							mp4,
-							ogg,
-						);
-						CFBundleTypeIconFiles = ();
-						CFBundleTypeName = "Audio Files";
-						CFBundleTypeRole = Editor;
-						LSHandlerRank = Owner;
-						LSItemContentTypes = (
-							"public.mp3",
-							"public.audio",
-							"com.apple.m4a-audio",
-							"public.aac-audio",
-							"public.mpeg-4-audio",
-							"org.xiph.flac",
-						);
-						LSTypeIsPackage = NO;
-					},
-				);
-				INFOPLIST_KEY_CFBundleURLTypes = (
-					{
-						CFBundleURLName = "錄音分析助手";
-						CFBundleURLSchemes = (
-							recordanalyzer,
-							recordanalyzer-files,
-						);
-					},
-				);
 				INFOPLIST_KEY_CFBundleDisplayName = "錄音分析助手";
+				INFOPLIST_KEY_CFBundleDocumentTypes = "{\n    CFBundleTypeExtensions =     (\n        mp3,\n        wav,\n        m4a,\n        aac,\n        flac,\n        mp4,\n        ogg\n    );\n    CFBundleTypeIconFiles =     (\n    );\n    CFBundleTypeName = \"Audio Files\";\n    CFBundleTypeRole = Editor;\n    LSHandlerRank = Owner;\n    LSItemContentTypes =     (\n        \"public.mp3\",\n        \"public.audio\",\n        \"com.apple.m4a-audio\",\n        \"public.aac-audio\",\n        \"public.mpeg-4-audio\",\n        \"org.xiph.flac\"\n    );\n    LSTypeIsPackage = NO;\n}";
 				INFOPLIST_KEY_CFBundleName = "錄音分析助手";
+				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleURLName = \"\\U9304\\U97f3\\U5206\\U6790\\U52a9\\U624b\";\n    CFBundleURLSchemes =     (\n        recordanalyzer,\n        \"recordanalyzer-files\"\n    );\n}";
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportsDocumentBrowser = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportsDocumentBrowser = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -550,6 +489,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		8A37A1882DE6EA010045F096 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.4.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		8A37A1892DE6EA010045F096 /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8A37A1882DE6EA010045F096 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
+			productName = MarkdownUI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = CE48 /* Project object */;
 }

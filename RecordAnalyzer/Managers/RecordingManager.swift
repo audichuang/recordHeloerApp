@@ -6,10 +6,11 @@ import AVFoundation
 @MainActor
 class RecordingManager: ObservableObject {
     @Published var recordings: [Recording] = []
+    @Published var recordingSummaries: [RecordingSummary] = []
     @Published var isLoading = false
     @Published var uploadProgress: Double = 0.0
     @Published var isUploading = false
-    @Published var errorMessage: String?
+    @Published var error: String?
     
     private let networkService = NetworkService.shared
     
@@ -19,12 +20,16 @@ class RecordingManager: ObservableObject {
     // 定時刷新
     private var refreshTimer: Timer?
     private var shouldAutoRefresh = false
+    private var lastRefreshTime: Date = Date(timeIntervalSince1970: 0)
+    private let minimumRefreshInterval: TimeInterval = 15.0 // 最少15秒間隔
     
     init() {
+        recordings = []
+        recordingSummaries = []
         Task {
-            await loadRecordings()
+            // 初始化時加載最近的錄音摘要
+            await loadRecentRecordingSummaries(limit: 10)
         }
-        startAutoRefresh()
     }
     
     deinit {
@@ -52,6 +57,14 @@ class RecordingManager: ObservableObject {
     /// 檢查是否需要刷新（有處理中的錄音時）
     private func checkAndRefreshIfNeeded() async {
         print("🔍 檢查是否需要自動刷新...")
+        
+        // 防抖動：檢查距離上次刷新是否足夠長時間
+        let timeSinceLastRefresh = Date().timeIntervalSince(lastRefreshTime)
+        if timeSinceLastRefresh < minimumRefreshInterval {
+            print("⏸️ 距離上次刷新時間太短 (\(String(format: "%.1f", timeSinceLastRefresh))秒)，跳過刷新")
+            return
+        }
+        
         print("📋 當前錄音數量: \(recordings.count)")
         
         // 檢查是否有處理中的錄音
@@ -70,9 +83,11 @@ class RecordingManager: ObservableObject {
         
         if !processingRecordings.isEmpty {
             print("🔄 檢測到 \(processingRecordings.count) 個處理中的錄音，開始自動刷新...")
+            lastRefreshTime = Date()
             await loadRecordingsSummary()
         } else {
-            print("✅ 沒有處理中的錄音，跳過自動刷新")
+            print("✅ 沒有處理中的錄音，停止自動刷新")
+            stopAutoRefresh()
         }
     }
     
@@ -89,7 +104,7 @@ class RecordingManager: ObservableObject {
     func uploadRecording(fileURL: URL, title: String) async -> Recording? {
         isUploading = true
         uploadProgress = 0.0
-        errorMessage = nil
+        error = nil
         
         // 如果是從 iCloud 或外部存儲獲取的文件，可能需要先下載
         let didStartAccessing = fileURL.startAccessingSecurityScopedResource()
@@ -108,7 +123,7 @@ class RecordingManager: ObservableObject {
             guard let attributes = try? FileManager.default.attributesOfItem(atPath: fileURL.path),
                   let fileSize = attributes[.size] as? NSNumber,
                   fileSize.intValue > 0 else {
-                errorMessage = "無法獲取文件大小或文件為空"
+                error = "無法獲取文件大小或文件為空"
                 isUploading = false
                 return nil
             }
@@ -116,7 +131,7 @@ class RecordingManager: ObservableObject {
             // 檢查文件格式
             let validExtensions = ["mp3", "wav", "m4a", "aac", "flac", "mp4", "ogg"]
             guard validExtensions.contains(fileURL.pathExtension.lowercased()) else {
-                errorMessage = "不支援的音頻格式: \(fileURL.pathExtension)"
+                error = "不支援的音頻格式: \(fileURL.pathExtension)"
                 isUploading = false
                 return nil
             }
@@ -162,102 +177,90 @@ class RecordingManager: ObservableObject {
         } catch let error as NetworkError {
             switch error {
             case .unauthorized:
-                errorMessage = "驗證失敗，請重新登入"
+                self.error = "驗證失敗，請重新登入"
             case .apiError(let message):
-                errorMessage = "上傳失敗：\(message)"
+                self.error = "上傳失敗：\(message)"
             case .networkError(let message):
-                errorMessage = "網絡錯誤：\(message)"
+                self.error = "網絡錯誤：\(message)"
             case .serverError(let code):
-                errorMessage = "伺服器錯誤 (\(code))"
+                self.error = "伺服器錯誤 (\(code))"
             default:
-                errorMessage = "上傳失敗：\(error.localizedDescription)"
+                self.error = "上傳失敗：\(error.localizedDescription)"
             }
             isUploading = false
             uploadProgress = 0.0
             return nil
         } catch {
-            errorMessage = "上傳失敗：\(error.localizedDescription)"
+            self.error = "上傳失敗：\(error.localizedDescription)"
             isUploading = false
             uploadProgress = 0.0
             return nil
         }
     }
     
-    /// 載入錄音摘要列表（輕量級，用於定期刷新）
-    func loadRecordingsSummary() async {
-        print("🔄 開始加載錄音摘要列表...")
-        // 不顯示載入狀態，避免頻繁的UI閃爍
+    /// 載入最近的錄音摘要（專為HomeView設計）
+    func loadRecentRecordingSummaries(limit: Int = 5) async {
+        print("🏠 開始加載最近 \(limit) 個錄音摘要...")
         
         do {
-            print("📡 嘗試從網路加載錄音摘要列表...")
-            let summaryRecordings = try await networkService.getRecordingsSummary()
-            print("✅ 從網路成功加載了 \(summaryRecordings.count) 個錄音摘要")
+            let summaries = try await networkService.getRecentRecordings(limit: limit)
+            print("✅ 成功加載了 \(summaries.count) 個最近錄音摘要")
             
-            // 更新現有錄音的狀態信息
-            var updatedRecordings = recordings
+            recordingSummaries = summaries
             
-            for summaryRecording in summaryRecordings {
-                if let index = updatedRecordings.firstIndex(where: { $0.id == summaryRecording.id }) {
-                    // 更新現有錄音的狀態信息
-                    let existingRecording = updatedRecordings[index]
-                    updatedRecordings[index] = Recording(
-                        id: existingRecording.id,
-                        title: summaryRecording.title,
-                        originalFilename: existingRecording.originalFilename.isEmpty ? summaryRecording.originalFilename : existingRecording.originalFilename,
-                        format: existingRecording.format.isEmpty ? summaryRecording.format : existingRecording.format,
-                        mimeType: existingRecording.mimeType.isEmpty ? summaryRecording.mimeType : existingRecording.mimeType,
-                        duration: summaryRecording.duration,
-                        createdAt: existingRecording.createdAt,
-                        transcription: existingRecording.transcription,
-                        summary: existingRecording.summary,
-                        fileURL: existingRecording.fileURL,
-                        fileSize: summaryRecording.fileSize,
-                        status: summaryRecording.status
-                    )
-                } else {
-                    // 新錄音，添加到列表
-                    updatedRecordings.insert(summaryRecording, at: 0)
-                }
+            // 如果recordings數組為空或者較少，也生成對應的Recording對象
+            if recordings.isEmpty || recordings.count <= limit {
+                recordings = summaries.map { $0.toRecording() }
             }
             
-            // 按創建時間排序
-            updatedRecordings.sort { $0.createdAt > $1.createdAt }
-            
-            // 更新UI
-            recordings = updatedRecordings
-            
-            // 檢查是否還有處理中的錄音
-            let stillProcessing = recordings.contains { recording in
-                if let status = recording.status {
-                    return ["uploading", "processing"].contains(status.lowercased())
-                }
-                return false
-            }
-            
-            if !stillProcessing {
-                // 如果沒有處理中的錄音，停止監控並載入完整資料
-                stopMonitoringForProcessing()
-                print("📋 所有錄音處理完成，載入完整資料...")
-                await loadRecordings()
-            }
-            
-        } catch let error as NetworkError {
-            print("❌ 網路加載摘要失敗: \(error.localizedDescription)")
         } catch {
-            print("❌ 未知錯誤: \(error.localizedDescription)")
+            print("❌ 載入最近錄音摘要失敗: \(error)")
+            self.error = "載入錄音列表失敗: \(error.localizedDescription)"
         }
+    }
+    
+    /// 載入最近的錄音（專為HomeView設計，向後兼容）
+    func loadRecentRecordings(limit: Int = 5) async {
+        await loadRecentRecordingSummaries(limit: limit)
+    }
+    
+    /// 載入錄音摘要列表（輕量級）
+    func loadRecordingsSummary() async {
+        print("📚 開始加載錄音摘要列表...")
+        isLoading = true
+        error = nil
+        
+        do {
+            let summaries = try await networkService.getRecordingsSummary()
+            print("✅ 成功加載了 \(summaries.count) 個錄音摘要")
+            
+            recordingSummaries = summaries
+            
+            // 同時更新recordings數組以保持兼容性
+            recordings = summaries.map { $0.toRecording() }
+            
+            // 排序
+            recordingSummaries.sort { $0.createdAt > $1.createdAt }
+            recordings.sort { $0.createdAt > $1.createdAt }
+            
+        } catch {
+            print("❌ 載入錄音摘要列表失敗: \(error)")
+            self.error = "載入錄音列表失敗: \(error.localizedDescription)"
+        }
+        
+        isLoading = false
     }
     
     func loadRecordings() async {
         print("🔄 開始加載錄音列表...")
         isLoading = true
-        errorMessage = nil
+        error = nil
         
         do {
-            // 先嘗試從網路載入
-            print("📡 嘗試從網路加載錄音列表...")
+            // 載入完整的錄音列表（包含逐字稿和摘要）
+            print("📡 嘗試從網路加載完整錄音列表...")
             let networkRecordings = try await networkService.getRecordings()
-            print("✅ 從網路成功加載了 \(networkRecordings.count) 個錄音")
+            print("✅ 從網路成功加載了 \(networkRecordings.count) 個錄音記錄（含完整內容）")
             
             // 更新UI
             self.recordings = networkRecordings
@@ -280,16 +283,16 @@ class RecordingManager: ObservableObject {
             if !savedRecordings.isEmpty {
                 print("📋 從本地存儲加載了 \(savedRecordings.count) 個錄音")
                 recordings = savedRecordings
-                errorMessage = "無法連接伺服器，顯示本地快取資料。"
+                self.error = "無法連接伺服器，顯示本地快取資料。"
             } else {
                 print("⚠️ 本地存儲中沒有錄音數據")
-                errorMessage = "載入錄音失敗：\(error.localizedDescription)"
+                self.error = "載入錄音失敗：\(error.localizedDescription)"
             }
             
             isLoading = false
         } catch {
             print("❌ 未知錯誤: \(error.localizedDescription)")
-            errorMessage = "載入錄音失敗：\(error.localizedDescription)"
+            self.error = "載入錄音失敗：\(error.localizedDescription)"
             isLoading = false
         }
     }
@@ -303,7 +306,7 @@ class RecordingManager: ObservableObject {
             recordings.removeAll { $0.id == recording.id }
             await dataStore.deleteRecording(recording.id)
         } catch {
-            errorMessage = "刪除失敗：\(error.localizedDescription)"
+            self.error = "刪除失敗：\(error.localizedDescription)"
         }
     }
 }

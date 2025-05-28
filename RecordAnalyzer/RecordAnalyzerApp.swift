@@ -244,7 +244,7 @@ struct FileImportView: View {
                         onComplete()
                     }
                 } else {
-                    errorMessage = recordingManager.errorMessage ?? "上傳失敗"
+                    errorMessage = recordingManager.error ?? "上傳失敗"
                 }
                 
                 isProcessing = false

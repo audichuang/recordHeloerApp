@@ -27,7 +27,7 @@ struct HomeView: View {
                     }
                     
                     // 錯誤信息
-                    if let error = recordingManager.errorMessage {
+                    if let error = recordingManager.error {
                         errorBanner(message: error)
                     }
                     
@@ -38,12 +38,15 @@ struct HomeView: View {
             }
             .navigationTitle("錄音分析助手")
             .refreshable {
-                await recordingManager.loadRecordings()
+                // 使用專門為HomeView設計的最近錄音API
+                await recordingManager.loadRecentRecordings(limit: 5)
             }
             .onAppear {
-                // 確保每次視圖出現時都從後端加載最新的錄音數據
-                Task {
-                    await recordingManager.loadRecordings()
+                if recordingManager.recordings.isEmpty {
+                    Task {
+                        // 使用專門為HomeView設計的最近錄音API
+                        await recordingManager.loadRecentRecordings(limit: 5)
+                    }
                 }
             }
         }
@@ -291,7 +294,7 @@ struct HomeView: View {
                 .padding(.vertical, 30)
             } else {
                 LazyVStack(spacing: 12) {
-                    ForEach(Array(recordingManager.recordings.prefix(3))) { recording in
+                    ForEach(Array(recordingManager.recordings.prefix(5))) { recording in
                         NavigationLink(destination: RecordingDetailView(recording: recording)) {
                             RecordingRowView(recording: recording)
                         }

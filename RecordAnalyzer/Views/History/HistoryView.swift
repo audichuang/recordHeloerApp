@@ -217,18 +217,22 @@ struct HistoryView: View {
         }
     }
     
-    private func loadDataIfNeeded() {
-        // 只在真正需要時才載入數據
-        if recordingManager.recordings.isEmpty && !recordingManager.isLoading {
-            Task {
-                await recordingManager.loadRecordings()
-            }
-        }
+    /// 刷新數據
+    private func refreshData() async {
+        // 使用輕量級的摘要API進行刷新
+        await recordingManager.loadRecordingsSummary()
     }
     
-    private func refreshData() async {
-        // 下拉刷新
-        await recordingManager.loadRecordings()
+    /// 首次載入或需要時載入數據
+    private func loadDataIfNeeded() {
+        guard !recordingManager.isLoading && recordingManager.recordings.isEmpty else {
+            return
+        }
+        
+        Task {
+            // 使用輕量級的摘要API進行初始載入
+            await recordingManager.loadRecordingsSummary()
+        }
     }
 }
 

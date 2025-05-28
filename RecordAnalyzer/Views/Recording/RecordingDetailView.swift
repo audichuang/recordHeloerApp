@@ -7,6 +7,7 @@ struct RecordingDetailView: View {
     @State private var detailRecording: Recording
     @State private var isLoadingDetail = false
     @State private var loadError: String?
+    @EnvironmentObject var recordingManager: RecordingManager
     
     private let networkService = NetworkService.shared
     
@@ -41,42 +42,122 @@ struct RecordingDetailView: View {
             }
         }
         .onAppear {
-            loadDetailIfNeeded()
+            // 立即顯示現有內容，不阻塞UI
+            syncWithRecordingManager()
+            
+            // 檢查是否需要載入完整詳細內容
+            let needsDetailLoading = checkIfNeedsDetailLoading()
+            
+            if needsDetailLoading {
+                print("📱 DetailView首次載入，在背景中獲取完整內容")
+                // 不設置 isLoadingDetail = true，避免阻塞UI
+                Task {
+                    await loadRecordingDetailInBackground()
+                }
+            } else {
+                print("📱 DetailView已有完整內容，無需重新載入")
+            }
+        }
+        .onChange(of: recordingManager.recordings) { _, newRecordings in
+            // 只在狀態變化時同步，避免覆蓋詳細內容
+            if let updatedRecording = newRecordings.first(where: { $0.id == detailRecording.id }),
+               updatedRecording.status != detailRecording.status {
+                print("📱 檢測到錄音狀態變化，同步更新")
+                syncWithRecordingManager()
+                
+                // 如果狀態變為已完成且沒有完整內容，重新載入詳情
+                if updatedRecording.status == "completed" && checkIfNeedsDetailLoading() {
+                    print("📱 錄音處理完成，載入完整內容")
+                    isLoadingDetail = true
+                    Task {
+                        await loadRecordingDetail()
+                    }
+                }
+            }
         }
         .refreshable {
             await loadRecordingDetail()
         }
     }
     
-    /// 檢查是否需要載入完整詳情
-    private func loadDetailIfNeeded() {
-        // 如果轉錄或摘要為空或只是佔位符，則載入完整詳情
-        let needsTranscription = detailRecording.transcription?.isEmpty ?? true || detailRecording.transcription == "可用"
-        let needsSummary = detailRecording.summary?.isEmpty ?? true || detailRecording.summary == "可用"
-        
-        if needsTranscription || needsSummary {
-            Task {
-                await loadRecordingDetail()
+    /// 與 RecordingManager 中的數據同步
+    private func syncWithRecordingManager() {
+        if let updatedRecording = recordingManager.recordings.first(where: { $0.id == detailRecording.id }) {
+            let oldStatus = detailRecording.status
+            
+            // 直接使用 RecordingManager 中的最新數據
+            detailRecording = updatedRecording
+            
+            // 如果狀態從處理中變為已完成，且內容為空，則立即顯示載入狀態並重新載入
+            if oldStatus != "completed" && updatedRecording.status == "completed" {
+                let hasTranscription = !(updatedRecording.transcription?.isEmpty ?? true) && updatedRecording.transcription != "可用"
+                let hasSummary = !(updatedRecording.summary?.isEmpty ?? true) && updatedRecording.summary != "可用"
+                
+                if !hasTranscription || !hasSummary {
+                    isLoadingDetail = true
+                    Task {
+                        await loadRecordingDetail()
+                    }
+                }
             }
         }
     }
     
     /// 載入完整錄音詳情
     private func loadRecordingDetail() async {
-        isLoadingDetail = true
-        loadError = nil
+        await MainActor.run {
+            isLoadingDetail = true
+            loadError = nil
+        }
         
         do {
             let fullRecording = try await networkService.getRecordingDetail(id: detailRecording.id.uuidString)
+            
             await MainActor.run {
                 self.detailRecording = fullRecording
                 self.isLoadingDetail = false
+                
+                // 同步更新的詳細資料到 RecordingManager
+                self.updateRecordingInManager(fullRecording)
             }
         } catch {
             await MainActor.run {
                 self.loadError = error.localizedDescription
                 self.isLoadingDetail = false
             }
+        }
+    }
+    
+    /// 在背景載入完整錄音詳情（不阻塞UI）
+    private func loadRecordingDetailInBackground() async {
+        await MainActor.run {
+            loadError = nil
+        }
+        
+        do {
+            let fullRecording = try await networkService.getRecordingDetail(id: detailRecording.id.uuidString)
+            
+            await MainActor.run {
+                // 平滑更新內容，不顯示載入狀態
+                self.detailRecording = fullRecording
+                
+                // 同步更新的詳細資料到 RecordingManager
+                self.updateRecordingInManager(fullRecording)
+                
+                print("📱 背景載入完成，內容已更新")
+            }
+        } catch {
+            await MainActor.run {
+                self.loadError = error.localizedDescription
+                print("❌ 背景載入失敗: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    /// 將更新的錄音詳情同步到 RecordingManager
+    private func updateRecordingInManager(_ updatedRecording: Recording) {
+        if let index = recordingManager.recordings.firstIndex(where: { $0.id == updatedRecording.id }) {
+            recordingManager.recordings[index] = updatedRecording
         }
     }
     
@@ -153,7 +234,7 @@ struct RecordingDetailView: View {
     
     private var transcriptionView: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            LazyVStack(alignment: .leading, spacing: 16) {
                 HStack {
                     Image(systemName: "text.alignleft")
                         .foregroundColor(.blue)
@@ -162,20 +243,29 @@ struct RecordingDetailView: View {
                         .fontWeight(.bold)
                     Spacer()
                     
-                    if isLoadingDetail {
+                    // 當內容是"可用"時，顯示載入指示器
+                    if detailRecording.transcription == "可用" || isLoadingDetail {
                         ProgressView()
                             .scaleEffect(0.8)
                     }
                 }
                 
-                if let transcription = detailRecording.transcription, !transcription.isEmpty, transcription != "可用" {
-                    Text(transcription)
-                        .font(.body)
-                        .lineSpacing(6)
-                        .textSelection(.enabled)
-                        .padding()
-                        .background(Color.gray.opacity(0.05))
-                        .cornerRadius(12)
+                if let transcription = detailRecording.transcription, !transcription.isEmpty {
+                    if transcription == "可用" {
+                        // 顯示背景載入狀態
+                        backgroundLoadingView(
+                            title: "正在載入逐字稿",
+                            message: "正在從伺服器獲取完整的逐字稿內容，請稍候...",
+                            icon: "text.alignleft",
+                            color: .blue
+                        )
+                    } else {
+                        // 使用優化的文本顯示
+                        OptimizedTextView(content: transcription)
+                            .padding()
+                            .background(Color.gray.opacity(0.05))
+                            .cornerRadius(12)
+                    }
                 } else if isLoadingDetail {
                     loadingPlaceholder
                 } else if let error = loadError {
@@ -195,7 +285,7 @@ struct RecordingDetailView: View {
     
     private var summaryView: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            LazyVStack(alignment: .leading, spacing: 16) {
                 HStack {
                     Image(systemName: "list.bullet.clipboard")
                         .foregroundColor(.green)
@@ -204,43 +294,56 @@ struct RecordingDetailView: View {
                         .fontWeight(.bold)
                     Spacer()
                     
-                    if isLoadingDetail {
+                    // 當內容是"可用"時，顯示載入指示器
+                    if detailRecording.summary == "可用" || isLoadingDetail {
                         ProgressView()
                             .scaleEffect(0.8)
                     }
                 }
                 
-                if let summary = detailRecording.summary, !summary.isEmpty, summary != "可用" {
-                    // 使用MarkdownText組件渲染摘要
-                    MarkdownText(content: summary)
-                        .textSelection(.enabled)
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.green.opacity(0.05))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.green.opacity(0.2), lineWidth: 1)
-                                )
+                if let summary = detailRecording.summary, !summary.isEmpty {
+                    if summary == "可用" {
+                        // 顯示背景載入狀態
+                        backgroundLoadingView(
+                            title: "正在載入摘要",
+                            message: "正在從伺服器獲取完整的智能摘要內容，請稍候...",
+                            icon: "list.bullet.clipboard",
+                            color: .green
                         )
-                    
-                    // 統計資訊
-                    if let transcription = detailRecording.transcription, !transcription.isEmpty, transcription != "可用" {
-                        VStack(spacing: 12) {
-                            HStack {
-                                Text("分析統計")
-                                    .font(.headline)
-                                    .fontWeight(.bold)
-                                Spacer()
-                            }
+                    } else {
+                        // 使用MarkdownText組件來渲染Markdown格式的摘要
+                        MarkdownText(content: summary)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.green.opacity(0.05))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.green.opacity(0.2), lineWidth: 1)
+                                    )
+                            )
+                        
+                        // 統計資訊 - 只在有數據時顯示
+                        if let transcription = detailRecording.transcription, 
+                           !transcription.isEmpty, 
+                           transcription != "可用",
+                           transcription.count > 0 && summary.count > 0 {
                             
-                            HStack(spacing: 16) {
-                                StatCard(title: "原文字數", value: "\(transcription.count)", icon: "textformat.123")
-                                StatCard(title: "摘要字數", value: "\(summary.count)", icon: "doc.text")
-                                StatCard(title: "壓縮比", value: String(format: "%.1f%%", Double(summary.count) / Double(transcription.count) * 100), icon: "arrow.down.circle")
+                            LazyVStack(spacing: 12) {
+                                HStack {
+                                    Text("分析統計")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                    Spacer()
+                                }
+                                
+                                HStack(spacing: 16) {
+                                    StatCard(title: "原文字數", value: "\(transcription.count)", icon: "textformat.123")
+                                    StatCard(title: "摘要字數", value: "\(summary.count)", icon: "doc.text")
+                                    StatCard(title: "壓縮比", value: String(format: "%.1f%%", Double(summary.count) / Double(transcription.count) * 100), icon: "arrow.down.circle")
+                                }
                             }
+                            .padding(.top)
                         }
-                        .padding(.top)
                     }
                 } else if isLoadingDetail {
                     loadingPlaceholder
@@ -279,6 +382,47 @@ struct RecordingDetailView: View {
         .padding(.horizontal)
         .background(color.opacity(0.05))
         .cornerRadius(12)
+    }
+    
+    /// 背景載入狀態視圖
+    private func backgroundLoadingView(title: String, message: String, icon: String, color: Color) -> some View {
+        VStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .stroke(color.opacity(0.2), lineWidth: 3)
+                    .frame(width: 60, height: 60)
+                
+                ProgressView()
+                    .scaleEffect(1.2)
+                    .tint(color)
+                
+                Image(systemName: icon)
+                    .font(.system(size: 20))
+                    .foregroundColor(color)
+                    .offset(y: -5)
+            }
+            
+            Text(title)
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundColor(color)
+            
+            Text(message)
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+        .padding(.horizontal)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(color.opacity(0.05))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(color.opacity(0.2), lineWidth: 1)
+                )
+        )
     }
     
     private var shareButton: some View {
@@ -332,12 +476,30 @@ struct RecordingDetailView: View {
     }
     
     private var loadingPlaceholder: some View {
-        VStack(spacing: 16) {
-            ProgressView("正在載入內容...")
-                .frame(maxWidth: .infinity, minHeight: 100)
-                .background(Color.gray.opacity(0.05))
-                .cornerRadius(12)
+        VStack(spacing: 20) {
+            ProgressView()
+                .scaleEffect(1.2)
+                .tint(.blue)
+            
+            Text("正在載入內容...")
+                .font(.headline)
+                .foregroundColor(.secondary)
+            
+            Text("請稍候，我們正在獲取完整的轉錄和摘要內容")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
         }
+        .frame(maxWidth: .infinity, minHeight: 150)
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.blue.opacity(0.05))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                )
+        )
     }
     
     private func errorMessage(_ error: String) -> some View {
@@ -366,6 +528,12 @@ struct RecordingDetailView: View {
         .padding()
         .background(Color.orange.opacity(0.05))
         .cornerRadius(12)
+    }
+    
+    private func checkIfNeedsDetailLoading() -> Bool {
+        let needsTranscription = detailRecording.transcription?.isEmpty ?? true || detailRecording.transcription == "可用"
+        let needsSummary = detailRecording.summary?.isEmpty ?? true || detailRecording.summary == "可用"
+        return needsTranscription || needsSummary
     }
 }
 
@@ -426,6 +594,104 @@ struct ShareSheet: UIViewControllerRepresentable {
     }
     
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+/// 優化的文本視圖，用於顯示大量文本而不阻塞UI
+struct OptimizedTextView: View {
+    let content: String
+    @State private var displayedChunks: [String] = []
+    @State private var isLoadingInitialChunk: Bool = false
+    @State private var isLoadingMore: Bool = false
+    @State private var allContentLoaded: Bool = false
+
+    private let chunkSize = 2000
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 8) {
+                if isLoadingInitialChunk && displayedChunks.isEmpty {
+                    ProgressView("正在載入內容...")
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+                
+                ForEach(displayedChunks.indices, id: \.self) { index in
+                    Text(displayedChunks[index])
+                        .font(.body)
+                        .lineSpacing(4)
+                        .textSelection(.enabled)
+                        .onAppear {
+                            if index == displayedChunks.count - 1 && !allContentLoaded && !isLoadingMore && !isLoadingInitialChunk {
+                                loadMoreContent()
+                            }
+                        }
+                }
+
+                if !displayedChunks.isEmpty && isLoadingMore {
+                    ProgressView()
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+            }
+            .padding(.horizontal)
+        }
+        .task {
+            if displayedChunks.isEmpty && !content.isEmpty {
+                await loadInitialChunk()
+            }
+        }
+    }
+
+    private func loadInitialChunk() async {
+        guard !content.isEmpty else { return }
+        
+        await MainActor.run {
+            isLoadingInitialChunk = true
+        }
+
+        let firstChunk = await Task.detached(priority: .userInitiated) { () -> String in
+            let end = min(chunkSize, content.count)
+            let endIndex = content.index(content.startIndex, offsetBy: end)
+            return String(content[content.startIndex..<endIndex])
+        }.value
+
+        await MainActor.run {
+            if !firstChunk.isEmpty {
+                displayedChunks.append(firstChunk)
+            }
+            allContentLoaded = displayedChunks.reduce(0, { $0 + $1.count }) >= content.count
+            isLoadingInitialChunk = false
+        }
+    }
+
+    private func loadMoreContent() {
+        guard !isLoadingInitialChunk && !isLoadingMore && !allContentLoaded else { return }
+        
+        Task {
+            await MainActor.run { isLoadingMore = true }
+
+            let currentLength = displayedChunks.reduce(0) { $0 + $1.count }
+            
+            let nextChunk = await Task.detached(priority: .userInitiated) { () -> String? in
+                guard currentLength < content.count else { return nil }
+                
+                let start = currentLength
+                let end = min(start + chunkSize, content.count)
+                
+                let startIndex = content.index(content.startIndex, offsetBy: start)
+                let endIndex = content.index(content.startIndex, offsetBy: end)
+                return String(content[startIndex..<endIndex])
+            }.value
+
+            await MainActor.run {
+                if let chunk = nextChunk, !chunk.isEmpty {
+                    displayedChunks.append(chunk)
+                }
+                allContentLoaded = displayedChunks.reduce(0, { $0 + $1.count }) >= content.count
+                isLoadingMore = false
+            }
+        }
+    }
 }
 
 #Preview {

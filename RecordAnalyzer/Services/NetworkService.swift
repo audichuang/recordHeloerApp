@@ -367,84 +367,70 @@ class NetworkService: ObservableObject {
         return recordings
     }
     
+    /// 錄音摘要列表響應結構
+    struct RecordingSummaryListResponse: Codable {
+        let recordings: [RecordingSummary]
+        let total: Int
+        let page: Int
+        let perPage: Int
+        
+        enum CodingKeys: String, CodingKey {
+            case recordings, total, page
+            case perPage = "per_page"
+        }
+    }
+    
     /// 獲取錄音摘要列表（輕量級，僅基本信息）
-    func getRecordingsSummary() async throws -> [Recording] {
+    func getRecordingsSummary(page: Int = 1, perPage: Int = 20) async throws -> [RecordingSummary] {
         guard let token = getAuthToken() else {
             throw NetworkError.unauthorized
         }
         
-        guard let url = URL(string: "\(baseURL)/recordings/summary") else {
+        // 構建帶分頁參數的URL
+        guard var urlComponents = URLComponents(string: "\(baseURL)/recordings/summary") else {
+            throw NetworkError.invalidURL
+        }
+        
+        urlComponents.queryItems = [
+            URLQueryItem(name: "page", value: String(page)),
+            URLQueryItem(name: "per_page", value: String(perPage))
+        ]
+        
+        guard let url = urlComponents.url else {
             throw NetworkError.invalidURL
         }
         
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        print("📡 發送請求到: \(url)")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+        
+        if httpResponse.statusCode == 401 {
+            throw NetworkError.unauthorized
+        }
+        
+        guard httpResponse.statusCode == 200 else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
         
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw NetworkError.invalidResponse
-            }
-            
-            print("📡 響應狀態碼: \(httpResponse.statusCode)")
-            
-            switch httpResponse.statusCode {
-            case 200...299:
-                // 解析響應
-                let jsonString = String(data: data, encoding: .utf8) ?? "無法解析響應數據"
-                print("📡 響應數據: \(jsonString.prefix(500))...")
-                
-                let decoder = JSONDecoder()
-                
-                do {
-                    // 解析為 RecordingSummaryList
-                    let response = try decoder.decode(RecordingSummaryList.self, from: data)
-                    print("✅ 成功解析錄音摘要列表: \(response.recordings.count) 個錄音")
-                    
-                    // 轉換為 Recording 對象（只包含基本信息）
-                    let recordings = response.recordings.map { summary in
-                        Recording(
-                            id: UUID(uuidString: summary.id) ?? UUID(),
-                            title: summary.title,
-                            originalFilename: "", // 摘要API不包含文件詳情
-                            format: "",
-                            mimeType: "",
-                            duration: summary.duration,
-                            createdAt: ISO8601DateFormatter().date(from: summary.created_at) ?? Date(),
-                            transcription: summary.has_transcript ? "可用" : nil,
-                            summary: summary.has_summary ? "可用" : nil,
-                            fileURL: nil,
-                            fileSize: summary.file_size,
-                            status: summary.status
-                        )
-                    }
-                    
-                    return recordings
-                } catch {
-                    print("❌ 解析錄音摘要列表失敗: \(error.localizedDescription)")
-                    throw NetworkError.decodingError
-                }
-                
-            case 401:
-                throw NetworkError.unauthorized
-            case 400...499:
-                throw NetworkError.clientError(httpResponse.statusCode)
-            case 500...599:
-                throw NetworkError.serverError(httpResponse.statusCode)
-            default:
-                throw NetworkError.unknownError
-            }
-            
-        } catch let error as NetworkError {
-            throw error
+            let recordingListResponse = try JSONDecoder().decode(RecordingSummaryListResponse.self, from: data)
+            return recordingListResponse.recordings
         } catch {
-            throw NetworkError.networkError(error.localizedDescription)
+            print("❌ 解析錄音摘要列表失敗: \(error)")
+            throw NetworkError.decodingError
         }
+    }
+    
+    /// 獲取最近的錄音摘要（專為HomeView設計）
+    func getRecentRecordings(limit: Int = 5) async throws -> [RecordingSummary] {
+        return try await getRecordingsSummary(page: 1, perPage: limit)
     }
     
     func uploadRecording(fileURL: URL, title: String, onProgress: @escaping @Sendable (Double) -> Void) async throws -> Recording {
@@ -974,28 +960,6 @@ struct UploadResponse: Codable {
 }
 
 // 添加錄音摘要響應模型
-struct RecordingSummary: Codable {
-    let id: String
-    let title: String
-    let duration: TimeInterval?
-    let file_size: Int
-    let status: String
-    let created_at: String
-    let has_transcript: Bool
-    let has_summary: Bool
-    
-    enum CodingKeys: String, CodingKey {
-        case id
-        case title
-        case duration
-        case file_size
-        case status
-        case created_at
-        case has_transcript
-        case has_summary
-    }
-}
-
 struct RecordingSummaryList: Codable {
     let recordings: [RecordingSummary]
     let total: Int
