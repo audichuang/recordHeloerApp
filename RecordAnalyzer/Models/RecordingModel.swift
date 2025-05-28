@@ -3,7 +3,9 @@ import Foundation
 struct Recording: Identifiable, Codable {
     var id: UUID
     let title: String
-    let fileName: String
+    let originalFilename: String
+    let format: String
+    let mimeType: String
     let duration: TimeInterval?
     let createdAt: Date
     let transcription: String?
@@ -15,7 +17,9 @@ struct Recording: Identifiable, Codable {
     enum CodingKeys: String, CodingKey {
         case id
         case title
-        case fileName = "file_path"
+        case originalFilename = "original_filename"
+        case format
+        case mimeType = "mime_type"
         case duration
         case createdAt = "created_at"
         case transcription = "transcript"
@@ -37,7 +41,9 @@ struct Recording: Identifiable, Codable {
         }
         
         title = try container.decode(String.self, forKey: .title)
-        fileName = try container.decode(String.self, forKey: .fileName)
+        originalFilename = try container.decode(String.self, forKey: .originalFilename)
+        format = try container.decode(String.self, forKey: .format)
+        mimeType = try container.decode(String.self, forKey: .mimeType)
         duration = try container.decodeIfPresent(TimeInterval.self, forKey: .duration)
         fileSize = try container.decodeIfPresent(Int.self, forKey: .fileSize)
         status = try container.decodeIfPresent(String.self, forKey: .status)
@@ -68,10 +74,12 @@ struct Recording: Identifiable, Codable {
         fileURL = nil // API 不返回完整URL，需要在顯示時構建
     }
     
-    init(id: UUID = UUID(), title: String, fileName: String, duration: TimeInterval? = nil, createdAt: Date, transcription: String? = nil, summary: String? = nil, fileURL: URL? = nil, fileSize: Int? = nil, status: String? = nil) {
+    init(id: UUID = UUID(), title: String, originalFilename: String, format: String, mimeType: String, duration: TimeInterval? = nil, createdAt: Date, transcription: String? = nil, summary: String? = nil, fileURL: URL? = nil, fileSize: Int? = nil, status: String? = nil) {
         self.id = id
         self.title = title
-        self.fileName = fileName
+        self.originalFilename = originalFilename
+        self.format = format
+        self.mimeType = mimeType
         self.duration = duration
         self.createdAt = createdAt
         self.transcription = transcription
@@ -79,6 +87,11 @@ struct Recording: Identifiable, Codable {
         self.fileURL = fileURL
         self.fileSize = fileSize
         self.status = status
+    }
+    
+    // 為了向後兼容，保留fileName屬性，但指向originalFilename
+    var fileName: String {
+        return originalFilename
     }
     
     var formattedDuration: String {

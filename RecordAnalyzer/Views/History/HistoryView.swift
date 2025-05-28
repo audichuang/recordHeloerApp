@@ -183,7 +183,7 @@ struct HistoryView: View {
             recordingManager.recordings : 
             recordingManager.recordings.filter { recording in
                 recording.title.localizedCaseInsensitiveContains(searchText) ||
-                recording.fileName.localizedCaseInsensitiveContains(searchText) ||
+                recording.originalFilename.localizedCaseInsensitiveContains(searchText) ||
                 (recording.transcription?.localizedCaseInsensitiveContains(searchText) ?? false)
             }
         
@@ -194,16 +194,24 @@ struct HistoryView: View {
             case .dateAscending:
                 return first.createdAt < second.createdAt
             case .titleAscending:
-                return first.title < second.title
+                return first.title.localizedCaseInsensitiveCompare(second.title) == .orderedAscending
             case .durationDescending:
-                if let firstDuration = first.duration, let secondDuration = second.duration {
-                    return firstDuration > secondDuration
-                } else if first.duration != nil {
+                // 處理時長排序 - 有時長的項目優先，然後按時長降序排列
+                let firstDuration = first.duration ?? 0
+                let secondDuration = second.duration ?? 0
+                
+                if firstDuration == 0 && secondDuration == 0 {
+                    // 如果都沒有時長，按創建時間降序
+                    return first.createdAt > second.createdAt
+                } else if firstDuration == 0 {
+                    // 第一個沒有時長，排在後面
+                    return false
+                } else if secondDuration == 0 {
+                    // 第二個沒有時長，排在後面
                     return true
-                } else if second.duration != nil {
-                    return false
                 } else {
-                    return false
+                    // 都有時長，按時長降序
+                    return firstDuration > secondDuration
                 }
             }
         }

@@ -351,7 +351,9 @@ class NetworkService: ObservableObject {
             Recording(
                 id: UUID(uuidString: recordingResponse.id) ?? UUID(),
                 title: recordingResponse.title,
-                fileName: recordingResponse.file_path,
+                originalFilename: recordingResponse.original_filename,
+                format: recordingResponse.format,
+                mimeType: recordingResponse.mime_type,
                 duration: recordingResponse.duration,
                 createdAt: ISO8601DateFormatter().date(from: recordingResponse.created_at) ?? Date(),
                 transcription: recordingResponse.transcript,
@@ -409,7 +411,9 @@ class NetworkService: ObservableObject {
                         Recording(
                             id: UUID(uuidString: summary.id) ?? UUID(),
                             title: summary.title,
-                            fileName: "", // 摘要API不包含文件路徑
+                            originalFilename: "", // 摘要API不包含文件詳情
+                            format: "",
+                            mimeType: "",
                             duration: summary.duration,
                             createdAt: ISO8601DateFormatter().date(from: summary.created_at) ?? Date(),
                             transcription: summary.has_transcript ? "可用" : nil,
@@ -443,7 +447,7 @@ class NetworkService: ObservableObject {
         }
     }
     
-    func uploadRecording(fileURL: URL, title: String, onProgress: @escaping (Double) -> Void) async throws -> Recording {
+    func uploadRecording(fileURL: URL, title: String, onProgress: @escaping @Sendable (Double) -> Void) async throws -> Recording {
         // 1. 檢查文件是否存在
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
             print("⚠️ 錯誤: 錄音文件不存在: \(fileURL.path)")
@@ -680,8 +684,7 @@ class NetworkService: ObservableObject {
                         print("📥 上傳回應 JSON: \(jsonString)")
                     }
                     
-                    do {
-                        switch httpResponse.statusCode {
+                    switch httpResponse.statusCode {
                         case 200...299:
                             // 嘗試解碼為 UploadResponse
                             do {
@@ -692,7 +695,9 @@ class NetworkService: ObservableObject {
                                 let tempRecording = Recording(
                                     id: UUID(uuidString: uploadResponse.recording_id) ?? UUID(),
                                     title: title,
-                                    fileName: fileURL.lastPathComponent,
+                                    originalFilename: fileURL.lastPathComponent,
+                                    format: fileURL.pathExtension.lowercased(),
+                                    mimeType: self.mimeTypeForFileExtension(fileURL.pathExtension),
                                     duration: 0, // 暫時不知道確切時長
                                     createdAt: Date(),
                                     transcription: "處理中...",
@@ -732,15 +737,6 @@ class NetworkService: ObservableObject {
                             print("❌ 伺服器錯誤(\(httpResponse.statusCode))")
                             continuation.resume(throwing: NetworkError.serverError(httpResponse.statusCode))
                         }
-                    } catch {
-                        print("❌ JSON解碼錯誤: \(error)")
-                        continuation.resume(throwing: NetworkError.decodingError)
-                    }
-                }
-                
-                // 將代理分配給任務
-                URLSession.shared.delegateQueue.addOperation {
-                    task.delegate = delegate
                 }
                 
                 // 添加進度監控，直接使用 onProgress 而不是 ProgressHandlerRef
@@ -831,7 +827,9 @@ class NetworkService: ObservableObject {
                     let recording = Recording(
                         id: UUID(uuidString: response.id) ?? UUID(),
                         title: response.title,
-                        fileName: response.file_path,
+                        originalFilename: response.original_filename,
+                        format: response.format,
+                        mimeType: response.mime_type,
                         duration: response.duration,
                         createdAt: ISO8601DateFormatter().date(from: response.created_at) ?? Date(),
                         transcription: response.transcript,
@@ -1009,7 +1007,9 @@ struct RecordingSummaryList: Codable {
 struct RecordingResponse: Codable {
     let id: String
     let title: String
-    let file_path: String
+    let original_filename: String
+    let format: String
+    let mime_type: String
     let duration: TimeInterval?
     let file_size: Int
     let status: String

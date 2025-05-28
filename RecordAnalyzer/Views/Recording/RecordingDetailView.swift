@@ -432,7 +432,9 @@ struct ShareSheet: UIViewControllerRepresentable {
     NavigationView {
         RecordingDetailView(recording: Recording(
             title: "會議記錄 - 項目進度討論",
-            fileName: "meeting_20241201.m4a",
+            originalFilename: "meeting_20241201.m4a",
+            format: "m4a",
+            mimeType: "audio/m4a",
             duration: 1245.0,
             createdAt: Date(),
             transcription: "今天的會議主要討論了項目的進度情況。我們已經完成了第一階段的開發工作，目前正在進行測試階段。預計下週可以完成所有測試工作，然後進入第二階段的開發。在討論過程中，我們也識別了一些潛在的風險和挑戰，需要在接下來的工作中特別注意。團隊成員都表示對目前的進度感到滿意，並且對後續的工作安排有清晰的了解。",

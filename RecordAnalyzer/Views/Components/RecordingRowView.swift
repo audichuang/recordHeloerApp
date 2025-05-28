@@ -87,7 +87,9 @@ struct RecordingRowView: View {
     VStack(spacing: 12) {
         RecordingRowView(recording: Recording(
             title: "會議記錄 - 項目討論",
-            fileName: "meeting_20241201.m4a",
+            originalFilename: "meeting_20241201.m4a",
+            format: "m4a",
+            mimeType: "audio/m4a",
             duration: 1245.0,
             createdAt: Date(),
             transcription: "這是測試逐字稿...",
@@ -99,7 +101,9 @@ struct RecordingRowView: View {
         
         RecordingRowView(recording: Recording(
             title: "客戶訪談",
-            fileName: "interview.wav",
+            originalFilename: "interview.wav",
+            format: "wav",
+            mimeType: "audio/wav",
             duration: 890.0,
             createdAt: Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date(),
             transcription: "這是測試逐字稿...",
@@ -111,7 +115,9 @@ struct RecordingRowView: View {
         
         RecordingRowView(recording: Recording(
             title: "失敗的錄音",
-            fileName: "failed.wav",
+            originalFilename: "failed.wav",
+            format: "wav",
+            mimeType: "audio/wav",
             duration: nil,
             createdAt: Calendar.current.date(byAdding: .day, value: -2, to: Date()) ?? Date(),
             transcription: nil,

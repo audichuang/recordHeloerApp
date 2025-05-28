@@ -203,7 +203,9 @@ class RecordingManager: ObservableObject {
                     updatedRecordings[index] = Recording(
                         id: existingRecording.id,
                         title: summaryRecording.title,
-                        fileName: existingRecording.fileName.isEmpty ? summaryRecording.fileName : existingRecording.fileName,
+                        originalFilename: existingRecording.originalFilename.isEmpty ? summaryRecording.originalFilename : existingRecording.originalFilename,
+                        format: existingRecording.format.isEmpty ? summaryRecording.format : existingRecording.format,
+                        mimeType: existingRecording.mimeType.isEmpty ? summaryRecording.mimeType : existingRecording.mimeType,
                         duration: summaryRecording.duration,
                         createdAt: existingRecording.createdAt,
                         transcription: existingRecording.transcription,
