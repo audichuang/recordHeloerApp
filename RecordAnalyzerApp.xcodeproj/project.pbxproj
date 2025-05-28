@@ -7,8 +7,19 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		192D7660A2FF64F1D3CC923C /* RecordingModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C4837839227014DA8EB16C1 /* RecordingModel.swift */; };
+		19A18C4EFBA2FBA9EC7B5A18 /* MarkdownText.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCE1F08525744ABCAE8ACCD7 /* MarkdownText.swift */; };
+		1FB5A0766BE818E4744998BF /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D59EF6B54EB69C21D9E9FBD2 /* Theme.swift */; };
+		2C83DDC00387710E7EDF471E /* RecordingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F37804AF41E4879F9B5964D /* RecordingDetailView.swift */; };
+		713A757A0CA06E85620571CD /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D96D560BB58104D674BCF4B5 /* HomeView.swift */; };
+		7180BB74EF8A6642FEA53C81 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4917F2FFCC5056779716A4C9 /* RegisterView.swift */; };
+		760120E652109B122D98D9DA /* CardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75CD83C433828362F72DC83E /* CardView.swift */; };
+		859FD6BA179833D2BD70CDC3 /* GradientText.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0B7F0A108E83268BCB9E52 /* GradientText.swift */; };
+		8A03487E2DE725B000E780E2 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A03487D2DE725B000E780E2 /* Theme.swift */; };
 		8A37A18A2DE6EA010045F096 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 8A37A1892DE6EA010045F096 /* MarkdownUI */; };
 		8A816D102DE597ED00F22D75 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A816D0E2DE597ED00F22D75 /* NetworkService.swift */; };
+		8B0DA5A1A2918C964979AA8E /* GradientButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 929B54721F25EF59754FAF3C /* GradientButton.swift */; };
+		B3C61FA1F04A9F8E71119E21 /* RecordingRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DB34D703FEA8CDC7B01DECC /* RecordingRowView.swift */; };
 		CE01 /* RecordAnalyzerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE02 /* RecordAnalyzerApp.swift */; };
 		CE03 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE04 /* ContentView.swift */; };
 		CE05 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CE06 /* Assets.xcassets */; };
@@ -24,10 +35,23 @@
 		CE25 /* RecordingRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE26 /* RecordingRowView.swift */; };
 		CE27 /* RecordingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE28 /* RecordingDetailView.swift */; };
 		CE54 /* MarkdownText.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE55 /* MarkdownText.swift */; };
+		CE87FBC0D60B1C750AFF828D /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76B8E7C233FEF26D62EB3613 /* ProfileView.swift */; };
+		E2FC998E3F7E3BDE490C74EF /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ACC62807824E03FB8A23B71 /* HistoryView.swift */; };
+		E57B56EF44EC871A2877C1BC /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FE90B4735CBA06CF7BAA3F7 /* LoginView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		1C4837839227014DA8EB16C1 /* RecordingModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RecordingModel.swift; path = RecordAnalyzer/Models/RecordingModel.swift; sourceTree = "<group>"; };
+		1DB34D703FEA8CDC7B01DECC /* RecordingRowView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RecordingRowView.swift; path = RecordAnalyzer/Views/Components/RecordingRowView.swift; sourceTree = "<group>"; };
+		3F37804AF41E4879F9B5964D /* RecordingDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RecordingDetailView.swift; path = RecordAnalyzer/Views/Recording/RecordingDetailView.swift; sourceTree = "<group>"; };
+		4917F2FFCC5056779716A4C9 /* RegisterView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RegisterView.swift; path = RecordAnalyzer/Views/Authentication/RegisterView.swift; sourceTree = "<group>"; };
+		75CD83C433828362F72DC83E /* CardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CardView.swift; path = RecordAnalyzer/Views/Components/CardView.swift; sourceTree = "<group>"; };
+		76B8E7C233FEF26D62EB3613 /* ProfileView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProfileView.swift; path = RecordAnalyzer/Views/Profile/ProfileView.swift; sourceTree = "<group>"; };
+		7ACC62807824E03FB8A23B71 /* HistoryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HistoryView.swift; path = RecordAnalyzer/Views/History/HistoryView.swift; sourceTree = "<group>"; };
+		8A03487D2DE725B000E780E2 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		8A816D0E2DE597ED00F22D75 /* NetworkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkService.swift; sourceTree = "<group>"; };
+		8FE90B4735CBA06CF7BAA3F7 /* LoginView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LoginView.swift; path = RecordAnalyzer/Views/Authentication/LoginView.swift; sourceTree = "<group>"; };
+		929B54721F25EF59754FAF3C /* GradientButton.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GradientButton.swift; path = RecordAnalyzer/Views/Components/GradientButton.swift; sourceTree = "<group>"; };
 		CE02 /* RecordAnalyzerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordAnalyzerApp.swift; sourceTree = "<group>"; };
 		CE04 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		CE06 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -44,6 +68,10 @@
 		CE28 /* RecordingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingDetailView.swift; sourceTree = "<group>"; };
 		CE29 /* RecordAnalyzer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RecordAnalyzer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CE55 /* MarkdownText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownText.swift; sourceTree = "<group>"; };
+		D59EF6B54EB69C21D9E9FBD2 /* Theme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Theme.swift; path = RecordAnalyzer/Models/Theme.swift; sourceTree = "<group>"; };
+		D96D560BB58104D674BCF4B5 /* HomeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HomeView.swift; path = RecordAnalyzer/Views/Home/HomeView.swift; sourceTree = "<group>"; };
+		DCE1F08525744ABCAE8ACCD7 /* MarkdownText.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MarkdownText.swift; path = RecordAnalyzer/Views/Components/MarkdownText.swift; sourceTree = "<group>"; };
+		FB0B7F0A108E83268BCB9E52 /* GradientText.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GradientText.swift; path = RecordAnalyzer/Views/Components/GradientText.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -71,6 +99,19 @@
 			children = (
 				CE32 /* RecordAnalyzer */,
 				CE33 /* Products */,
+				1C4837839227014DA8EB16C1 /* RecordingModel.swift */,
+				D59EF6B54EB69C21D9E9FBD2 /* Theme.swift */,
+				FB0B7F0A108E83268BCB9E52 /* GradientText.swift */,
+				75CD83C433828362F72DC83E /* CardView.swift */,
+				1DB34D703FEA8CDC7B01DECC /* RecordingRowView.swift */,
+				DCE1F08525744ABCAE8ACCD7 /* MarkdownText.swift */,
+				929B54721F25EF59754FAF3C /* GradientButton.swift */,
+				D96D560BB58104D674BCF4B5 /* HomeView.swift */,
+				3F37804AF41E4879F9B5964D /* RecordingDetailView.swift */,
+				76B8E7C233FEF26D62EB3613 /* ProfileView.swift */,
+				7ACC62807824E03FB8A23B71 /* HistoryView.swift */,
+				8FE90B4735CBA06CF7BAA3F7 /* LoginView.swift */,
+				4917F2FFCC5056779716A4C9 /* RegisterView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -109,6 +150,7 @@
 		CE35 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				8A03487D2DE725B000E780E2 /* Theme.swift */,
 				CE14 /* RecordingModel.swift */,
 			);
 			path = Models;
@@ -270,8 +312,22 @@
 				CE23 /* ProfileView.swift in Sources */,
 				CE25 /* RecordingRowView.swift in Sources */,
 				8A816D102DE597ED00F22D75 /* NetworkService.swift in Sources */,
+				8A03487E2DE725B000E780E2 /* Theme.swift in Sources */,
 				CE27 /* RecordingDetailView.swift in Sources */,
 				CE54 /* MarkdownText.swift in Sources */,
+				192D7660A2FF64F1D3CC923C /* RecordingModel.swift in Sources */,
+				1FB5A0766BE818E4744998BF /* Theme.swift in Sources */,
+				859FD6BA179833D2BD70CDC3 /* GradientText.swift in Sources */,
+				760120E652109B122D98D9DA /* CardView.swift in Sources */,
+				B3C61FA1F04A9F8E71119E21 /* RecordingRowView.swift in Sources */,
+				19A18C4EFBA2FBA9EC7B5A18 /* MarkdownText.swift in Sources */,
+				8B0DA5A1A2918C964979AA8E /* GradientButton.swift in Sources */,
+				713A757A0CA06E85620571CD /* HomeView.swift in Sources */,
+				2C83DDC00387710E7EDF471E /* RecordingDetailView.swift in Sources */,
+				CE87FBC0D60B1C750AFF828D /* ProfileView.swift in Sources */,
+				E2FC998E3F7E3BDE490C74EF /* HistoryView.swift in Sources */,
+				E57B56EF44EC871A2877C1BC /* LoginView.swift in Sources */,
+				7180BB74EF8A6642FEA53C81 /* RegisterView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

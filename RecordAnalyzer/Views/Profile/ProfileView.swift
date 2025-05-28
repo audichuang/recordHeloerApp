@@ -6,25 +6,52 @@ struct ProfileView: View {
     @State private var showingLogoutAlert = false
     
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 25) {
-                    // 用戶資訊卡片
-                    userInfoCard
-                    
-                    // 統計資訊
-                    statisticsSection
-                    
-                    // 設定選項
-                    settingsSection
-                    
-                    // 登出按鈕
-                    logoutSection
+        ScrollView {
+            VStack(spacing: 25) {
+                // 用戶資訊卡片
+                AnimatedCardView(
+                    title: "個人資訊",
+                    icon: "person.fill",
+                    gradient: AppTheme.Gradients.primary,
+                    delay: 0.1
+                ) {
+                    userInfoContent
                 }
-                .padding()
+                
+                // 統計資訊
+                AnimatedCardView(
+                    title: "使用統計",
+                    icon: "chart.bar.fill",
+                    gradient: AppTheme.Gradients.secondary,
+                    delay: 0.2
+                ) {
+                    statisticsContent
+                }
+                
+                // 設定選項
+                AnimatedCardView(
+                    title: "設定",
+                    icon: "gear",
+                    gradient: AppTheme.Gradients.info,
+                    delay: 0.3
+                ) {
+                    settingsContent
+                }
+                
+                // 登出按鈕
+                AnimatedCardView(
+                    title: "帳戶操作",
+                    icon: "power",
+                    gradient: AppTheme.Gradients.error,
+                    delay: 0.4
+                ) {
+                    logoutContent
+                }
             }
-            .navigationTitle("個人資料")
+            .padding()
         }
+        .background(AppTheme.Colors.background)
+        .navigationTitle("個人資料")
         .alert("確認登出", isPresented: $showingLogoutAlert) {
             Button("取消", role: .cancel) { }
             Button("登出", role: .destructive) {
@@ -35,155 +62,167 @@ struct ProfileView: View {
         }
     }
     
-    private var userInfoCard: some View {
-        VStack(spacing: 16) {
+    private var userInfoContent: some View {
+        VStack(spacing: 20) {
             // 用戶頭像
-            Circle()
-                .fill(Color.blue.gradient)
-                .frame(width: 80, height: 80)
-                .overlay(
-                    Text(userInitials)
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                )
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: AppTheme.Gradients.primary),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 80, height: 80)
+                    .shadow(color: AppTheme.Colors.primary.opacity(0.5), radius: 8, x: 0, y: 4)
+                
+                Text(userInitials)
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+            }
             
             // 用戶資訊
             VStack(spacing: 8) {
                 if let user = authManager.currentUser {
-                    Text(user.username)
-                        .font(.title2)
-                        .fontWeight(.bold)
+                    GradientText(
+                        text: user.username,
+                        gradient: AppTheme.Gradients.primary,
+                        fontSize: 24,
+                        fontWeight: .bold
+                    )
                     
                     Text(user.email)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(AppTheme.Colors.textSecondary)
                     
-                    Text("會員自 \(formattedJoinDate)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    HStack(spacing: 4) {
+                        Image(systemName: "calendar")
+                            .font(.caption)
+                            .foregroundColor(AppTheme.Colors.textTertiary)
+                        
+                        Text("會員自 \(formattedJoinDate)")
+                            .font(.caption)
+                            .foregroundColor(AppTheme.Colors.textTertiary)
+                    }
                 }
             }
         }
         .frame(maxWidth: .infinity)
-        .padding()
-        .background(Color.blue.opacity(0.1))
-        .cornerRadius(15)
     }
     
-    private var statisticsSection: some View {
+    private var statisticsContent: some View {
         VStack(spacing: 16) {
-            HStack {
-                Text("使用統計")
-                    .font(.headline)
-                    .fontWeight(.bold)
-                Spacer()
-            }
-            
-            HStack(spacing: 16) {
-                StatisticCard(
+            HStack(spacing: 12) {
+                ModernStatCard(
                     title: "總錄音數",
                     value: "\(recordingManager.recordings.count)",
                     icon: "waveform",
-                    color: .blue
+                    gradient: AppTheme.Gradients.primary
                 )
                 
-                StatisticCard(
+                ModernStatCard(
                     title: "總時長",
                     value: totalDuration,
                     icon: "clock",
-                    color: .green
+                    gradient: AppTheme.Gradients.success
                 )
             }
             
-            HStack(spacing: 16) {
-                StatisticCard(
+            HStack(spacing: 12) {
+                ModernStatCard(
                     title: "本月新增",
                     value: "\(currentMonthRecordings)",
                     icon: "calendar",
-                    color: .orange
+                    gradient: AppTheme.Gradients.warning
                 )
                 
-                StatisticCard(
+                ModernStatCard(
                     title: "平均時長",
                     value: averageDuration,
                     icon: "chart.line.uptrend.xyaxis",
-                    color: .purple
+                    gradient: AppTheme.Gradients.secondary
                 )
             }
         }
     }
     
-    private var settingsSection: some View {
-        VStack(spacing: 16) {
-            HStack {
-                Text("設定")
-                    .font(.headline)
-                    .fontWeight(.bold)
-                Spacer()
-            }
+    private var settingsContent: some View {
+        VStack(spacing: 12) {
+            ModernSettingRow(
+                icon: "bell",
+                title: "通知設定",
+                subtitle: "管理推送通知",
+                iconColor: AppTheme.Colors.warning,
+                action: { }
+            )
             
-            VStack(spacing: 12) {
-                SettingRow(
-                    icon: "bell",
-                    title: "通知設定",
-                    subtitle: "管理推送通知",
-                    action: { }
-                )
-                
-                SettingRow(
-                    icon: "icloud",
-                    title: "雲端同步",
-                    subtitle: "自動備份錄音到雲端",
-                    action: { }
-                )
-                
-                SettingRow(
-                    icon: "gear",
-                    title: "音質設定",
-                    subtitle: "調整錄音和上傳品質",
-                    action: { }
-                )
-                
-                SettingRow(
-                    icon: "questionmark.circle",
-                    title: "幫助與支援",
-                    subtitle: "常見問題和客服聯繫",
-                    action: { }
-                )
-                
-                SettingRow(
-                    icon: "doc.text",
-                    title: "隱私政策",
-                    subtitle: "查看隱私政策和使用條款",
-                    action: { }
-                )
-            }
-            .background(Color.gray.opacity(0.05))
-            .cornerRadius(12)
+            ModernSettingRow(
+                icon: "icloud",
+                title: "雲端同步",
+                subtitle: "自動備份錄音到雲端",
+                iconColor: AppTheme.Colors.info,
+                action: { }
+            )
+            
+            ModernSettingRow(
+                icon: "gear",
+                title: "音質設定",
+                subtitle: "調整錄音和上傳品質",
+                iconColor: AppTheme.Colors.primary,
+                action: { }
+            )
+            
+            ModernSettingRow(
+                icon: "questionmark.circle",
+                title: "幫助與支援",
+                subtitle: "常見問題和客服聯繫",
+                iconColor: AppTheme.Colors.success,
+                action: { }
+            )
+            
+            ModernSettingRow(
+                icon: "doc.text",
+                title: "隱私政策",
+                subtitle: "查看隱私政策和使用條款",
+                iconColor: AppTheme.Colors.textSecondary,
+                action: { }
+            )
         }
     }
     
-    private var logoutSection: some View {
+    private var logoutContent: some View {
         VStack(spacing: 16) {
             Button(action: {
                 showingLogoutAlert = true
             }) {
-                HStack {
+                HStack(spacing: 12) {
                     Image(systemName: "power")
+                        .font(.system(size: 16))
                     Text("登出")
                         .fontWeight(.medium)
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color.red.opacity(0.1))
-                .foregroundColor(.red)
-                .cornerRadius(12)
+                .background(
+                    RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
+                        .fill(AppTheme.Colors.error.opacity(0.1))
+                )
+                .foregroundColor(AppTheme.Colors.error)
             }
             
-            Text("版本 1.0.0")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            HStack {
+                Image(systemName: "info.circle")
+                    .font(.caption)
+                    .foregroundColor(AppTheme.Colors.textTertiary)
+                
+                Text("版本 1.0.0")
+                    .font(.caption)
+                    .foregroundColor(AppTheme.Colors.textTertiary)
+                
+                Spacer()
+            }
         }
     }
     
@@ -245,6 +284,99 @@ struct ProfileView: View {
             let year = calendar.component(.year, from: recording.createdAt)
             return month == currentMonth && year == currentYear
         }.count
+    }
+}
+
+struct ModernStatCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let gradient: [Color]
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: gradient),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 40, height: 40)
+                    .shadow(color: gradient[0].opacity(0.5), radius: 4, x: 0, y: 2)
+                
+                Image(systemName: icon)
+                    .font(.system(size: 18))
+                    .foregroundColor(.white)
+            }
+            
+            Text(value)
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundColor(AppTheme.Colors.textPrimary)
+            
+            Text(title)
+                .font(.caption)
+                .foregroundColor(AppTheme.Colors.textSecondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
+                .fill(gradient[0].opacity(0.1))
+        )
+    }
+}
+
+struct ModernSettingRow: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let iconColor: Color
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(iconColor.opacity(0.1))
+                        .frame(width: 40, height: 40)
+                    
+                    Image(systemName: icon)
+                        .font(.system(size: 16))
+                        .foregroundColor(iconColor)
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(AppTheme.Colors.textPrimary)
+                    
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(AppTheme.Colors.textSecondary)
+                        .lineLimit(2)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(AppTheme.Colors.textTertiary)
+            }
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
+                    .fill(AppTheme.Colors.cardHighlight)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 

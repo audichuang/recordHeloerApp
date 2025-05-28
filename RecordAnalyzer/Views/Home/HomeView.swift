@@ -10,45 +10,85 @@ struct HomeView: View {
     @State private var selectedFileURL: URL?
     @State private var errorMessage: String?
     @State private var showingErrorAlert = false
+    @State private var animateCards = false
+    @Binding var selectedTab: Int
+    
+    // 為預覽提供預設初始化器
+    init(selectedTab: Binding<Int> = .constant(0)) {
+        self._selectedTab = selectedTab
+    }
     
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 25) {
-                    // 歡迎區域
-                    welcomeSection
-                    
-                    // 上傳區域
-                    uploadSection
-                    
-                    // 上傳進度
-                    if recordingManager.isUploading {
-                        uploadProgressSection
-                    }
-                    
-                    // 錯誤信息
-                    if let error = recordingManager.error {
-                        errorBanner(message: error)
-                    }
-                    
-                    // 最近的錄音
-                    recentRecordingsSection
+        ScrollView {
+            VStack(spacing: 25) {
+                // 歡迎區域
+                welcomeSection
+                    .smallShadow()
+                    .offset(y: animateCards ? 0 : -30)
+                    .opacity(animateCards ? 1 : 0)
+                
+                // 上傳區域
+                AnimatedCardView(
+                    title: "上傳新錄音",
+                    icon: "square.and.arrow.up.fill",
+                    gradient: AppTheme.Gradients.info,
+                    delay: 0.2
+                ) {
+                    uploadContent
                 }
-                .padding()
-            }
-            .navigationTitle("錄音分析助手")
-            .refreshable {
-                // 使用專門為HomeView設計的最近錄音API
-                await recordingManager.loadRecentRecordings(limit: 5)
-            }
-            .onAppear {
-                if recordingManager.recordings.isEmpty {
-                    Task {
-                        // 使用專門為HomeView設計的最近錄音API
-                        await recordingManager.loadRecentRecordings(limit: 5)
-                    }
+                
+                // 上傳進度
+                if recordingManager.isUploading {
+                    uploadProgressSection
+                        .smallShadow()
+                        .transition(.asymmetric(
+                            insertion: .scale(scale: 0.9).combined(with: .opacity),
+                            removal: .scale(scale: 0.8).combined(with: .opacity)
+                        ))
+                }
+                
+                // 錯誤信息
+                if let error = recordingManager.error {
+                    errorBanner(message: error)
+                        .smallShadow()
+                        .transition(.asymmetric(
+                            insertion: .scale(scale: 0.9).combined(with: .opacity),
+                            removal: .scale(scale: 0.8).combined(with: .opacity)
+                        ))
+                }
+                
+                // 最近的錄音
+                AnimatedCardView(
+                    title: "最近的錄音",
+                    icon: "clock.fill",
+                    gradient: AppTheme.Gradients.secondary,
+                    delay: 0.4
+                ) {
+                    recentRecordingsContent
                 }
             }
+            .padding()
+        }
+        .background(Color.clear)
+        .navigationTitle("錄音分析助手")
+        .refreshable {
+            // 使用專門為HomeView設計的最近錄音API
+            await recordingManager.loadRecentRecordings(limit: 5)
+        }
+        .onAppear {
+            withAnimation(AppTheme.Animation.standard) {
+                animateCards = true
+            }
+            
+            if recordingManager.recordings.isEmpty {
+                Task {
+                    // 使用專門為HomeView設計的最近錄音API
+                    await recordingManager.loadRecentRecordings(limit: 5)
+                }
+            }
+        }
+        .onDisappear {
+            animateCards = false
         }
         .fileImporter(
             isPresented: $showingFilePicker,
@@ -121,174 +161,257 @@ struct HomeView: View {
     }
     
     private var welcomeSection: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("歡迎回來！")
-                        .font(.title2)
-                        .fontWeight(.bold)
+                VStack(alignment: .leading, spacing: 6) {
+                    ShimmeringText(
+                        text: "歡迎回來！",
+                        fontSize: 24,
+                        fontWeight: .bold,
+                        baseColor: AppTheme.Colors.textPrimary
+                    )
                     
                     if let user = authManager.currentUser {
-                        Text("\(user.username)")
-                            .font(.title3)
-                            .foregroundColor(.blue)
+                        GradientText(
+                            text: "\(user.username)",
+                            gradient: AppTheme.Gradients.primary,
+                            fontSize: 20,
+                            fontWeight: .semibold
+                        )
                     }
                 }
                 
                 Spacer()
                 
-                Image(systemName: "waveform.circle.fill")
-                    .font(.system(size: 50))
-                    .foregroundColor(.blue)
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                gradient: Gradient(colors: AppTheme.Gradients.primary),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 60, height: 60)
+                        .shadow(color: AppTheme.Colors.primary.opacity(0.5), radius: 8, x: 0, y: 4)
+                    
+                    Image(systemName: "waveform")
+                        .font(.system(size: 28))
+                        .foregroundColor(.white)
+                        .symbolEffect(.variableColor, options: .repeating, value: animateCards)
+                }
             }
             
             Text("將您的錄音轉換為準確的文字記錄和智能摘要")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppTheme.Colors.textSecondary)
                 .multilineTextAlignment(.leading)
+                .padding(.top, 4)
         }
         .padding()
-        .background(Color.blue.opacity(0.1))
-        .cornerRadius(15)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.large)
+                    .fill(AppTheme.Colors.card)
+                
+                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.large)
+                    .stroke(
+                        LinearGradient(
+                            gradient: Gradient(colors: [AppTheme.Colors.primary.opacity(0.5), AppTheme.Colors.secondary.opacity(0.3)]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 2
+                    )
+                    .opacity(0.5)
+            }
+        )
     }
     
-    private var uploadSection: some View {
-        VStack(spacing: 16) {
-            Text("上傳新錄音")
-                .font(.headline)
-                .fontWeight(.semibold)
-            
-            VStack(spacing: 12) {
-                Button(action: {
-                    showingFilePicker = true
-                }) {
-                    VStack(spacing: 12) {
+    private var uploadContent: some View {
+        VStack(spacing: 12) {
+            Button(action: {
+                showingFilePicker = true
+            }) {
+                VStack(spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(AppTheme.Colors.primary.opacity(0.1))
+                            .frame(width: 80, height: 80)
+                        
                         Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 40))
-                            .foregroundColor(.blue)
-                        
-                        Text("選擇錄音檔案")
-                            .font(.headline)
-                            .foregroundColor(.blue)
-                        
-                        Text("支援 MP3, M4A, WAV 等格式")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                            .font(.system(size: 34))
+                            .foregroundColor(AppTheme.Colors.primary)
+                            .symbolEffect(.bounce, options: .repeating.speed(1.5), value: animateCards)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 30)
-                    .background(
-                        RoundedRectangle(cornerRadius: 15)
-                            .stroke(Color.blue, style: StrokeStyle(lineWidth: 2, dash: [10]))
-                    )
-                }
-                .buttonStyle(PlainButtonStyle())
-                
-                // 分割線
-                HStack {
-                    VStack { Divider() }
-                    Text("或")
+                    
+                    Text("選擇錄音檔案")
+                        .font(.headline)
+                        .foregroundColor(AppTheme.Colors.primary)
+                    
+                    Text("支援 MP3, M4A, WAV 等格式")
                         .font(.caption)
-                        .foregroundColor(.secondary)
-                    VStack { Divider() }
+                        .foregroundColor(AppTheme.Colors.textSecondary)
                 }
-                .padding(.horizontal)
-                
-                // 從其他APP導入提示
-                VStack(spacing: 8) {
-                    HStack {
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 30)
+                .background(
+                    RoundedRectangle(cornerRadius: AppTheme.CornerRadius.large)
+                        .stroke(
+                            LinearGradient(
+                                gradient: Gradient(colors: [AppTheme.Colors.primary.opacity(0.5), AppTheme.Colors.secondary.opacity(0.3)]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            style: StrokeStyle(lineWidth: 2, dash: [10])
+                        )
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            
+            // 分割線
+            HStack {
+                VStack { Divider() }
+                Text("或")
+                    .font(.caption)
+                    .foregroundColor(AppTheme.Colors.textSecondary)
+                VStack { Divider() }
+            }
+            .padding(.horizontal)
+            
+            // 從其他APP導入提示
+            VStack(spacing: 8) {
+                HStack {
+                    ZStack {
+                        Circle()
+                            .fill(AppTheme.Colors.success.opacity(0.1))
+                            .frame(width: 40, height: 40)
+                        
                         Image(systemName: "square.and.arrow.up")
-                            .font(.title2)
-                            .foregroundColor(.green)
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("從其他APP分享")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.green)
-                            
-                            Text("在語音備忘錄或其他錄音APP中點擊分享，選擇「錄音分析助手」")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .lineLimit(2)
-                        }
-                        
-                        Spacer()
+                            .font(.system(size: 16))
+                            .foregroundColor(AppTheme.Colors.success)
                     }
-                    .padding()
-                    .background(Color.green.opacity(0.1))
-                    .cornerRadius(12)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("從其他APP分享")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(AppTheme.Colors.success)
+                        
+                        Text("在語音備忘錄或其他錄音APP中點擊分享，選擇「錄音分析助手」")
+                            .font(.caption)
+                            .foregroundColor(AppTheme.Colors.textSecondary)
+                            .lineLimit(2)
+                    }
+                    
+                    Spacer()
                 }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
+                        .fill(AppTheme.Colors.success.opacity(0.1))
+                )
             }
         }
-        .padding()
-        .background(Color.gray.opacity(0.05))
-        .cornerRadius(15)
     }
     
     private var uploadProgressSection: some View {
         VStack(spacing: 12) {
             Text("正在處理錄音...")
                 .font(.headline)
+                .fontWeight(.semibold)
             
             ProgressView(value: recordingManager.uploadProgress)
-                .progressViewStyle(LinearProgressViewStyle())
-                .scaleEffect(1.2)
+                .progressViewStyle(
+                    GradientProgressStyle(
+                        gradient: Gradient(colors: AppTheme.Gradients.warning)
+                    )
+                )
+                .frame(height: 8)
             
             Text("\(Int(recordingManager.uploadProgress * 100))% 完成")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppTheme.Colors.textSecondary)
         }
         .padding()
-        .background(Color.orange.opacity(0.1))
-        .cornerRadius(15)
+        .background(
+            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.large)
+                .fill(AppTheme.Colors.card)
+        )
     }
     
     private func errorBanner(message: String) -> some View {
         VStack(spacing: 12) {
-            Text("錯誤信息")
-                .font(.headline)
-                .fontWeight(.semibold)
+            HStack {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(AppTheme.Colors.error)
+                
+                Text("錯誤信息")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(AppTheme.Colors.error)
+                
+                Spacer()
+            }
             
             Text(message)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppTheme.Colors.textSecondary)
         }
         .padding()
-        .background(Color.red.opacity(0.1))
-        .cornerRadius(15)
+        .background(
+            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.large)
+                .fill(AppTheme.Colors.card)
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.CornerRadius.large)
+                        .stroke(AppTheme.Colors.error.opacity(0.3), lineWidth: 1)
+                )
+        )
     }
     
-    private var recentRecordingsSection: some View {
+    private var recentRecordingsContent: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("最近的錄音")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                
                 Spacer()
                 
-                NavigationLink("查看全部") {
-                    HistoryView()
+                Button(action: {
+                    // 直接切換到歷史標籤頁
+                    selectedTab = 1
+                }) {
+                    HStack(spacing: 4) {
+                        Text("查看全部")
+                            .font(.subheadline)
+                            .foregroundColor(AppTheme.Colors.primary)
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(AppTheme.Colors.primary)
+                    }
                 }
-                .font(.subheadline)
-                .foregroundColor(.blue)
             }
             
             if recordingManager.recordings.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "music.note.list")
-                        .font(.system(size: 40))
-                        .foregroundColor(.gray)
+                VStack(spacing: 20) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.gray.opacity(0.1))
+                            .frame(width: 80, height: 80)
+                        
+                        Image(systemName: "music.note.list")
+                            .font(.system(size: 34))
+                            .foregroundColor(.gray)
+                    }
                     
-                    Text("尚無錄音記錄")
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                    
-                    Text("上傳您的第一個錄音文件開始使用")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
+                    VStack(spacing: 8) {
+                        Text("尚無錄音記錄")
+                            .font(.headline)
+                            .foregroundColor(AppTheme.Colors.textSecondary)
+                        
+                        Text("上傳您的第一個錄音文件開始使用")
+                            .font(.subheadline)
+                            .foregroundColor(AppTheme.Colors.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 30)
@@ -306,8 +429,34 @@ struct HomeView: View {
     }
 }
 
+// 自定義漸變進度條樣式
+struct GradientProgressStyle: ProgressViewStyle {
+    var height: Double = 8
+    var gradient: Gradient
+    
+    func makeBody(configuration: Configuration) -> some View {
+        let fractionCompleted = configuration.fractionCompleted ?? 0
+        
+        return ZStack(alignment: .leading) {
+            RoundedRectangle(cornerRadius: height / 2)
+                .frame(height: height)
+                .foregroundColor(Color.gray.opacity(0.2))
+            
+            RoundedRectangle(cornerRadius: height / 2)
+                .frame(width: max(CGFloat(fractionCompleted) * UIScreen.main.bounds.width - 80, 0), height: height)
+                .foregroundStyle(
+                    LinearGradient(
+                        gradient: gradient,
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+        }
+    }
+}
+
 #Preview {
-    HomeView()
+    HomeView(selectedTab: .constant(0))
         .environmentObject(AuthenticationManager())
         .environmentObject(RecordingManager())
 } 

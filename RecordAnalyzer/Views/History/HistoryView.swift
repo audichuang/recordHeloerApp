@@ -14,151 +14,172 @@ struct HistoryView: View {
     }
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 0) {
-                // 搜尋和排序區域
-                searchAndSortSection
-                    .opacity(recordingManager.isLoading ? 0.6 : 1.0)
-                    .animation(.easeInOut(duration: 0.3), value: recordingManager.isLoading)
+        ScrollView {
+            VStack(spacing: 25) {
+                // 搜尋和排序卡片
+                AnimatedCardView(
+                    title: "搜尋與篩選",
+                    icon: "magnifyingglass",
+                    gradient: AppTheme.Gradients.info,
+                    delay: 0.1
+                ) {
+                    searchAndSortContent
+                }
                 
-                // 錄音列表
-                recordingsList
+                // 統計卡片
+                AnimatedCardView(
+                    title: "統計資訊",
+                    icon: "chart.bar.fill",
+                    gradient: AppTheme.Gradients.secondary,
+                    delay: 0.2
+                ) {
+                    statisticsContent
+                }
+                
+                // 錄音列表卡片
+                AnimatedCardView(
+                    title: "錄音列表 (\(filteredAndSortedRecordings.count))",
+                    icon: "list.bullet",
+                    gradient: AppTheme.Gradients.primary,
+                    delay: 0.3
+                ) {
+                    recordingsListContent
+                }
             }
-            .navigationTitle("歷史紀錄")
-            .refreshable {
-                await refreshData()
-            }
-            .onAppear {
-                loadDataIfNeeded()
-            }
+            .padding()
+        }
+        .background(AppTheme.Colors.background)
+        .navigationTitle("歷史紀錄")
+        .refreshable {
+            await refreshData()
+        }
+        .onAppear {
+            loadDataIfNeeded()
         }
     }
     
-    private var searchAndSortSection: some View {
-        VStack(spacing: 12) {
+    private var searchAndSortContent: some View {
+        VStack(spacing: 16) {
             // 搜尋框
             HStack {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(.gray)
+                    .foregroundColor(AppTheme.Colors.primary)
+                    .font(.system(size: 16))
                 
                 TextField("搜尋錄音...", text: $searchText)
+                    .textFieldStyle(PlainTextFieldStyle())
                 
                 if !searchText.isEmpty {
-                    Button("清除") {
-                        searchText = ""
+                    Button(action: { searchText = "" }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(AppTheme.Colors.textSecondary)
                     }
-                    .font(.caption)
-                    .foregroundColor(.blue)
                 }
             }
             .padding()
-            .background(Color.gray.opacity(0.1))
-            .cornerRadius(10)
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
+                    .fill(AppTheme.Colors.cardHighlight)
+            )
             
             // 排序選項
             HStack {
-                Text("排序方式:")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                Picker("排序", selection: $sortOption) {
-                    ForEach(SortOption.allCases, id: \.self) { option in
-                        Text(option.rawValue).tag(option)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("排序方式")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(AppTheme.Colors.textPrimary)
+                    
+                    Picker("排序", selection: $sortOption) {
+                        ForEach(SortOption.allCases, id: \.self) { option in
+                            Text(option.rawValue).tag(option)
+                        }
                     }
+                    .pickerStyle(MenuPickerStyle())
+                    .accentColor(AppTheme.Colors.primary)
                 }
-                .pickerStyle(MenuPickerStyle())
                 
                 Spacer()
                 
-                HStack(spacing: 4) {
+                VStack(alignment: .trailing, spacing: 4) {
                     if recordingManager.isLoading {
-                        ProgressView()
-                            .scaleEffect(0.7)
+                        HStack(spacing: 6) {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                            Text("載入中...")
+                                .font(.caption)
+                                .foregroundColor(AppTheme.Colors.textSecondary)
+                        }
+                    } else {
+                        Text("\(filteredAndSortedRecordings.count) 個錄音")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(AppTheme.Colors.primary)
                     }
-                    
-                    Text("\(filteredAndSortedRecordings.count) 個錄音")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
                 }
             }
         }
-        .padding()
-        .background(Color(.systemBackground))
-        .shadow(color: .black.opacity(0.05), radius: 1, x: 0, y: 1)
     }
     
-    private var recordingsList: some View {
+    private var recordingsListContent: some View {
         Group {
             if recordingManager.isLoading && recordingManager.recordings.isEmpty {
-                // 骨架屏載入動畫
-                loadingSkeletonView
+                loadingSkeletonContent
             } else if filteredAndSortedRecordings.isEmpty {
-                emptyStateView
-                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                emptyStateContent
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(filteredAndSortedRecordings) { recording in
-                            NavigationLink(destination: RecordingDetailView(recording: recording)) {
-                                RecordingRowView(recording: recording)
-                                    .transition(.asymmetric(
-                                        insertion: .move(edge: .trailing).combined(with: .opacity),
-                                        removal: .move(edge: .leading).combined(with: .opacity)
-                                    ))
-                            }
-                            .buttonStyle(PlainButtonStyle())
+                LazyVStack(spacing: 12) {
+                    ForEach(filteredAndSortedRecordings) { recording in
+                        NavigationLink(destination: RecordingDetailView(recording: recording)) {
+                            RecordingRowView(recording: recording)
+                                .transition(.asymmetric(
+                                    insertion: .move(edge: .trailing).combined(with: .opacity),
+                                    removal: .move(edge: .leading).combined(with: .opacity)
+                                ))
                         }
+                        .buttonStyle(PlainButtonStyle())
                     }
-                    .padding()
-                    .animation(.spring(response: 0.6, dampingFraction: 0.8), value: filteredAndSortedRecordings.count)
                 }
-                .refreshable {
-                    await refreshData()
-                }
+                .animation(.spring(response: 0.6, dampingFraction: 0.8), value: filteredAndSortedRecordings.count)
             }
         }
     }
     
-    private var loadingSkeletonView: some View {
-        ScrollView {
-            LazyVStack(spacing: 12) {
-                ForEach(0..<6, id: \.self) { _ in
-                    SkeletonRowView()
-                }
+    private var loadingSkeletonContent: some View {
+        LazyVStack(spacing: 12) {
+            ForEach(0..<5, id: \.self) { _ in
+                SkeletonRowView()
             }
-            .padding()
         }
         .disabled(true)
     }
     
-    private var emptyStateView: some View {
-        VStack(spacing: 24) {
-            // 動畫圖標
+    private var emptyStateContent: some View {
+        VStack(spacing: 20) {
             ZStack {
                 Circle()
-                    .fill(Color.blue.opacity(0.1))
-                    .frame(width: 120, height: 120)
+                    .fill(AppTheme.Colors.primary.opacity(0.1))
+                    .frame(width: 80, height: 80)
                 
                 Image(systemName: searchText.isEmpty ? "music.note.list" : "magnifyingglass")
-                    .font(.system(size: 40, weight: .light))
-                    .foregroundColor(.blue)
+                    .font(.system(size: 30, weight: .light))
+                    .foregroundColor(AppTheme.Colors.primary)
                     .scaleEffect(showingLoadingAnimation ? 1.1 : 1.0)
                     .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: showingLoadingAnimation)
             }
             
-            VStack(spacing: 12) {
+            VStack(spacing: 8) {
                 Text(searchText.isEmpty ? "尚無錄音記錄" : "找不到相關錄音")
-                    .font(.title2)
+                    .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppTheme.Colors.textPrimary)
                 
                 Text(searchText.isEmpty ? 
-                     "上傳您的第一個錄音文件開始使用智能分析功能" : 
-                     "請嘗試其他搜尋關鍵字或調整篩選條件")
-                    .font(.body)
-                    .foregroundColor(.secondary)
+                     "上傳您的第一個錄音文件開始使用" : 
+                     "請嘗試其他搜尋關鍵字")
+                    .font(.subheadline)
+                    .foregroundColor(AppTheme.Colors.textSecondary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal)
             }
             
             if searchText.isEmpty {
@@ -166,15 +187,81 @@ struct HistoryView: View {
                     HomeView()
                 }
                 .buttonStyle(.borderedProminent)
-                .controlSize(.large)
+                .controlSize(.regular)
                 .scaleEffect(showingLoadingAnimation ? 1.05 : 1.0)
                 .animation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true), value: showingLoadingAnimation)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding()
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 20)
         .onAppear {
             showingLoadingAnimation = true
+        }
+    }
+    
+    private var statisticsContent: some View {
+        HStack(spacing: 16) {
+            VStack(spacing: 8) {
+                Text("\(recordingManager.recordings.count)")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(AppTheme.Colors.primary)
+                
+                Text("總錄音數")
+                    .font(.caption)
+                    .foregroundColor(AppTheme.Colors.textSecondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
+                    .fill(AppTheme.Colors.primary.opacity(0.1))
+            )
+            
+            VStack(spacing: 8) {
+                Text(totalDurationText)
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundColor(AppTheme.Colors.success)
+                
+                Text("總時長")
+                    .font(.caption)
+                    .foregroundColor(AppTheme.Colors.textSecondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
+                    .fill(AppTheme.Colors.success.opacity(0.1))
+            )
+            
+            VStack(spacing: 8) {
+                Text("\(filteredAndSortedRecordings.count)")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(AppTheme.Colors.secondary)
+                
+                Text("篩選結果")
+                    .font(.caption)
+                    .foregroundColor(AppTheme.Colors.textSecondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
+                    .fill(AppTheme.Colors.secondary.opacity(0.1))
+            )
+        }
+    }
+    
+    private var totalDurationText: String {
+        let total = recordingManager.recordings.reduce(0.0) { $0 + ($1.duration ?? 0.0) }
+        let hours = Int(total) / 3600
+        let minutes = Int(total) % 3600 / 60
+        if hours > 0 {
+            return "\(hours)h\(minutes)m"
+        } else {
+            return "\(minutes)m"
         }
     }
     
