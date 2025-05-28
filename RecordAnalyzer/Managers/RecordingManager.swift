@@ -211,6 +211,7 @@ class RecordingManager: ObservableObject {
             // 如果recordings數組為空或者較少，也生成對應的Recording對象
             if recordings.isEmpty || recordings.count <= limit {
                 recordings = summaries.map { $0.toRecording() }
+                    .sorted { $0.createdAt > $1.createdAt }
             }
             
         } catch {
@@ -239,9 +240,11 @@ class RecordingManager: ObservableObject {
             // 同時更新recordings數組以保持兼容性
             recordings = summaries.map { $0.toRecording() }
             
-            // 排序
+            // 確保排序（最新的在前）
             recordingSummaries.sort { $0.createdAt > $1.createdAt }
             recordings.sort { $0.createdAt > $1.createdAt }
+            
+            print("📊 錄音列表已排序，最新錄音: \(recordings.first?.title ?? "無"), 創建時間: \(recordings.first?.createdAt ?? Date())")
             
         } catch {
             print("❌ 載入錄音摘要列表失敗: \(error)")

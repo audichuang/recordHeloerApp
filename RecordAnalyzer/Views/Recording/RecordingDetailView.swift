@@ -15,6 +15,7 @@ struct RecordingDetailView: View {
     @State private var showRegenerateAlert = false
     @State private var showRegenerateSuccess = false
     @State private var regenerateSuccessMessage = ""
+    @State private var showTimelineTranscript = false
     @EnvironmentObject var recordingManager: RecordingManager
     
     private let networkService = NetworkService.shared
@@ -81,19 +82,25 @@ struct RecordingDetailView: View {
                 print("📱 DetailView已有完整內容，無需重新載入")
             }
         }
-        .onChange(of: recordingManager.recordings) { _, newRecordings in
+        .onChange(of: recordingManager.recordings) { oldRecordings, newRecordings in
             // 只在狀態變化時同步，避免覆蓋詳細內容
-            if let updatedRecording = newRecordings.first(where: { $0.id == detailRecording.id }),
-               updatedRecording.status != detailRecording.status {
-                print("📱 檢測到錄音狀態變化，同步更新")
-                syncWithRecordingManager()
+            if let updatedRecording = newRecordings.first(where: { $0.id == detailRecording.id }) {
+                // 檢查是否有實質性變化
+                let oldRecording = oldRecordings.first(where: { $0.id == detailRecording.id })
                 
-                // 如果狀態變為已完成且沒有完整內容，重新載入詳情
-                if updatedRecording.status == "completed" && checkIfNeedsDetailLoading() {
-                    print("📱 錄音處理完成，載入完整內容")
-                    isLoadingDetail = true
-                    Task {
-                        await loadRecordingDetail()
+                // 只在狀態或內容有變化時更新
+                if oldRecording?.status != updatedRecording.status ||
+                   oldRecording?.transcription != updatedRecording.transcription ||
+                   oldRecording?.summary != updatedRecording.summary {
+                    print("📱 檢測到錄音內容變化，同步更新")
+                    syncWithRecordingManager()
+                    
+                    // 如果狀態變為已完成且沒有完整內容，重新載入詳情
+                    if updatedRecording.status == "completed" && checkIfNeedsDetailLoading() {
+                        print("📱 錄音處理完成，載入完整內容")
+                        Task {
+                            await loadRecordingDetailInBackground()
+                        }
                     }
                 }
             }
@@ -122,6 +129,11 @@ struct RecordingDetailView: View {
     private func syncWithRecordingManager() {
         if let updatedRecording = recordingManager.recordings.first(where: { $0.id == detailRecording.id }) {
             let oldStatus = detailRecording.status
+            let oldTranscription = detailRecording.transcription
+            let oldSummary = detailRecording.summary
+            
+            // 避免不必要的更新
+            guard updatedRecording != detailRecording else { return }
             
             // 直接使用 RecordingManager 中的最新數據
             detailRecording = updatedRecording
@@ -438,6 +450,22 @@ struct RecordingDetailView: View {
                     .buttonStyle(.bordered)
                     .tint(AppTheme.Colors.primary)
                     
+                    // 時間軸切換按鈕（只在有時間軸時顯示）
+                    if detailRecording.hasTimeline {
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                showTimelineTranscript.toggle()
+                            }
+                        }) {
+                            Label(showTimelineTranscript ? "純文字" : "時間軸", 
+                                  systemImage: showTimelineTranscript ? "text.alignleft" : "timeline.selection")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(AppTheme.Colors.primary)
+                    }
+                    
                     Spacer()
                 }
                 
@@ -453,7 +481,11 @@ struct RecordingDetailView: View {
                     } else {
                         // 優化的文本顯示
                         let _ = print("🎯 顯示逐字稿，長度: \(transcription.count)")
-                        ContentDisplayView(content: transcription, type: .transcription)
+                        if showTimelineTranscript, let timeline = detailRecording.timelineTranscript {
+                            ContentDisplayView(content: timeline, type: .transcription)
+                        } else {
+                            ContentDisplayView(content: transcription, type: .transcription)
+                        }
                     }
                 } else if isLoadingDetail {
                     ModernLoadingView(

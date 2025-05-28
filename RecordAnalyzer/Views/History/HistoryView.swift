@@ -5,6 +5,9 @@ struct HistoryView: View {
     @State private var searchText = ""
     @State private var sortOption: SortOption = .dateDescending
     @State private var showingLoadingAnimation = true
+    @State private var cachedFilteredRecordings: [Recording] = []
+    @State private var lastSearchText = ""
+    @State private var lastSortOption: SortOption = .dateDescending
     
     enum SortOption: String, CaseIterable {
         case dateDescending = "最新優先"
@@ -130,7 +133,8 @@ struct HistoryView: View {
             } else {
                 LazyVStack(spacing: 12) {
                     ForEach(filteredAndSortedRecordings) { recording in
-                        NavigationLink(destination: RecordingDetailView(recording: recording)) {
+                        NavigationLink(destination: RecordingDetailView(recording: recording)
+                            .id(recording.id)) {
                             RecordingRowView(recording: recording)
                                 .transition(.asymmetric(
                                     insertion: .move(edge: .trailing).combined(with: .opacity),
@@ -138,6 +142,7 @@ struct HistoryView: View {
                                 ))
                         }
                         .buttonStyle(PlainButtonStyle())
+                        .id(recording.id) // 加入ID以提升導航性能
                     }
                 }
                 .animation(.spring(response: 0.6, dampingFraction: 0.8), value: filteredAndSortedRecordings.count)
@@ -266,6 +271,20 @@ struct HistoryView: View {
     }
     
     private var filteredAndSortedRecordings: [Recording] {
+        // 如果數據沒有變化，返回緩存結果
+        if searchText == lastSearchText && 
+           sortOption == lastSortOption && 
+           !cachedFilteredRecordings.isEmpty &&
+           cachedFilteredRecordings.count <= recordingManager.recordings.count {
+            return cachedFilteredRecordings
+        }
+        
+        // 更新緩存標記
+        DispatchQueue.main.async {
+            self.lastSearchText = searchText
+            self.lastSortOption = sortOption
+        }
+        
         let filtered = searchText.isEmpty ? 
             recordingManager.recordings : 
             recordingManager.recordings.filter { recording in
@@ -274,7 +293,7 @@ struct HistoryView: View {
                 (recording.transcription?.localizedCaseInsensitiveContains(searchText) ?? false)
             }
         
-        return filtered.sorted { first, second in
+        let sorted = filtered.sorted { first, second in
             switch sortOption {
             case .dateDescending:
                 return first.createdAt > second.createdAt
@@ -302,10 +321,20 @@ struct HistoryView: View {
                 }
             }
         }
+        
+        // 更新緩存
+        DispatchQueue.main.async {
+            self.cachedFilteredRecordings = sorted
+        }
+        
+        return sorted
     }
     
     /// 刷新數據
     private func refreshData() async {
+        // 清除緩存
+        cachedFilteredRecordings = []
+        
         // 使用輕量級的摘要API進行刷新
         await recordingManager.loadRecordingsSummary()
     }

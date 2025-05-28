@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 
 /// 輕量級錄音摘要結構，用於列表顯示和性能優化
-struct RecordingSummary: Identifiable, Codable, Equatable {
+struct RecordingSummary: Identifiable, Codable, Equatable, Sendable {
     var id: UUID
     let title: String
     let duration: TimeInterval?
@@ -173,7 +173,7 @@ struct RecordingSummary: Identifiable, Codable, Equatable {
     }
 }
 
-struct Recording: Identifiable, Codable, Equatable {
+struct Recording: Identifiable, Codable, Equatable, Sendable {
     var id: UUID
     let title: String
     let originalFilename: String
@@ -186,6 +186,9 @@ struct Recording: Identifiable, Codable, Equatable {
     let fileURL: URL?
     let fileSize: Int?
     var status: String?
+    let timelineTranscript: String?
+    let hasTimeline: Bool
+    let analysisMetadata: [String: String]?
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -200,6 +203,9 @@ struct Recording: Identifiable, Codable, Equatable {
         case fileURL
         case fileSize = "file_size"
         case status
+        case timelineTranscript = "timeline_transcript"
+        case hasTimeline = "has_timeline"
+        case analysisMetadata = "analysis_metadata"
     }
     
     init(from decoder: Decoder) throws {
@@ -245,9 +251,20 @@ struct Recording: Identifiable, Codable, Equatable {
         transcription = try container.decodeIfPresent(String.self, forKey: .transcription)
         summary = try container.decodeIfPresent(String.self, forKey: .summary)
         fileURL = nil // API 不返回完整URL，需要在顯示時構建
+        
+        // 處理時間軸相關欄位
+        timelineTranscript = try container.decodeIfPresent(String.self, forKey: .timelineTranscript)
+        hasTimeline = try container.decodeIfPresent(Bool.self, forKey: .hasTimeline) ?? false
+        
+        // 處理 analysisMetadata - 由於是 Any 類型，需要特殊處理
+        if let metadataDict = try? container.decodeIfPresent([String: String].self, forKey: .analysisMetadata) {
+            analysisMetadata = metadataDict
+        } else {
+            analysisMetadata = nil
+        }
     }
     
-    init(id: UUID = UUID(), title: String, originalFilename: String, format: String, mimeType: String, duration: TimeInterval? = nil, createdAt: Date, transcription: String? = nil, summary: String? = nil, fileURL: URL? = nil, fileSize: Int? = nil, status: String? = nil) {
+    init(id: UUID = UUID(), title: String, originalFilename: String, format: String, mimeType: String, duration: TimeInterval? = nil, createdAt: Date, transcription: String? = nil, summary: String? = nil, fileURL: URL? = nil, fileSize: Int? = nil, status: String? = nil, timelineTranscript: String? = nil, hasTimeline: Bool = false, analysisMetadata: [String: String]? = nil) {
         self.id = id
         self.title = title
         self.originalFilename = originalFilename
@@ -260,6 +277,9 @@ struct Recording: Identifiable, Codable, Equatable {
         self.fileURL = fileURL
         self.fileSize = fileSize
         self.status = status
+        self.timelineTranscript = timelineTranscript
+        self.hasTimeline = hasTimeline
+        self.analysisMetadata = analysisMetadata
     }
     
     // 為了向後兼容，保留fileName屬性，但指向originalFilename
