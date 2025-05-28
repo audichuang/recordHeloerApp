@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 /// 輕量級錄音摘要結構，用於列表顯示和性能優化
 struct RecordingSummary: Identifiable, Codable, Equatable {
@@ -408,4 +409,211 @@ struct AnalysisResult: Codable {
     let summary: String
     let confidence: Double
     let language: String
-} 
+}
+
+// MARK: - Analysis History Models
+struct AnalysisHistory: Identifiable, Codable, Equatable {
+    let id: UUID
+    let recordingId: UUID
+    let analysisType: AnalysisType
+    let content: String
+    let status: AnalysisStatus
+    let provider: String
+    let version: Int
+    let isCurrent: Bool
+    let errorMessage: String?
+    let language: String
+    let confidenceScore: Double?
+    let processingTime: Double?
+    let createdAt: Date
+    let updatedAt: Date
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case recordingId = "recording_id"
+        case analysisType = "analysis_type"
+        case content
+        case status
+        case provider
+        case version
+        case isCurrent = "is_current"
+        case errorMessage = "error_message"
+        case language
+        case confidenceScore = "confidence_score"
+        case processingTime = "processing_time"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        // ID處理
+        if let uuidString = try? container.decode(String.self, forKey: .id),
+           let uuid = UUID(uuidString: uuidString) {
+            self.id = uuid
+        } else {
+            self.id = UUID()
+        }
+        
+        // Recording ID處理
+        if let recordingIdString = try? container.decode(String.self, forKey: .recordingId),
+           let recordingUuid = UUID(uuidString: recordingIdString) {
+            self.recordingId = recordingUuid
+        } else {
+            self.recordingId = UUID()
+        }
+        
+        // 解析其他字段
+        let analysisTypeString = try container.decode(String.self, forKey: .analysisType)
+        self.analysisType = AnalysisType(rawValue: analysisTypeString) ?? .transcription
+        
+        let statusString = try container.decode(String.self, forKey: .status)
+        self.status = AnalysisStatus(rawValue: statusString) ?? .processing
+        
+        self.content = try container.decode(String.self, forKey: .content)
+        self.provider = try container.decode(String.self, forKey: .provider)
+        self.version = try container.decode(Int.self, forKey: .version)
+        self.isCurrent = try container.decode(Bool.self, forKey: .isCurrent)
+        self.errorMessage = try container.decodeIfPresent(String.self, forKey: .errorMessage)
+        self.language = try container.decodeIfPresent(String.self, forKey: .language) ?? "zh"
+        self.confidenceScore = try container.decodeIfPresent(Double.self, forKey: .confidenceScore)
+        self.processingTime = try container.decodeIfPresent(Double.self, forKey: .processingTime)
+        
+        // 日期處理
+        let createdAtString = try container.decode(String.self, forKey: .createdAt)
+        let updatedAtString = try container.decode(String.self, forKey: .updatedAt)
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ"
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+        
+        if let createdDate = dateFormatter.date(from: createdAtString) {
+            self.createdAt = createdDate
+        } else {
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ"
+            self.createdAt = dateFormatter.date(from: createdAtString) ?? Date()
+        }
+        
+        if let updatedDate = dateFormatter.date(from: updatedAtString) {
+            self.updatedAt = updatedDate
+        } else {
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ"
+            self.updatedAt = dateFormatter.date(from: updatedAtString) ?? Date()
+        }
+    }
+    
+    // MARK: - Computed Properties
+    var formattedCreatedAt: String {
+        let now = Date()
+        let calendar = Calendar.current
+        
+        if calendar.isDateInToday(createdAt) {
+            let timeFormatter = DateFormatter()
+            timeFormatter.dateFormat = "HH:mm"
+            return "今天 \(timeFormatter.string(from: createdAt))"
+        }
+        
+        if calendar.isDateInYesterday(createdAt) {
+            let timeFormatter = DateFormatter()
+            timeFormatter.dateFormat = "HH:mm"
+            return "昨天 \(timeFormatter.string(from: createdAt))"
+        }
+        
+        let daysSinceCreated = calendar.dateComponents([.day], from: createdAt, to: now).day ?? 0
+        if daysSinceCreated < 7 {
+            let dayFormatter = DateFormatter()
+            dayFormatter.dateFormat = "EEEE HH:mm"
+            dayFormatter.locale = Locale(identifier: "zh_TW")
+            return dayFormatter.string(from: createdAt)
+        }
+        
+        if calendar.component(.year, from: createdAt) == calendar.component(.year, from: now) {
+            let monthFormatter = DateFormatter()
+            monthFormatter.dateFormat = "M月d日 HH:mm"
+            monthFormatter.locale = Locale(identifier: "zh_TW")
+            return monthFormatter.string(from: createdAt)
+        }
+        
+        let fullFormatter = DateFormatter()
+        fullFormatter.dateFormat = "yy年M月d日"
+        fullFormatter.locale = Locale(identifier: "zh_TW")
+        return fullFormatter.string(from: createdAt)
+    }
+    
+    var statusText: String {
+        switch status {
+        case .processing:
+            return "處理中"
+        case .completed:
+            return "已完成"
+        case .failed:
+            return "失敗"
+        }
+    }
+    
+    var analysisTypeText: String {
+        switch analysisType {
+        case .transcription:
+            return "逐字稿"
+        case .summary:
+            return "摘要"
+        }
+    }
+    
+    // MARK: - Equatable
+    static func == (lhs: AnalysisHistory, rhs: AnalysisHistory) -> Bool {
+        return lhs.id == rhs.id &&
+               lhs.version == rhs.version &&
+               lhs.status == rhs.status &&
+               lhs.isCurrent == rhs.isCurrent &&
+               lhs.language == rhs.language &&
+               lhs.confidenceScore == rhs.confidenceScore &&
+               lhs.processingTime == rhs.processingTime
+    }
+}
+
+enum AnalysisType: String, CaseIterable, Codable {
+    case transcription = "transcription"
+    case summary = "summary"
+    
+    var displayName: String {
+        switch self {
+        case .transcription:
+            return "逐字稿"
+        case .summary:
+            return "摘要"
+        }
+    }
+}
+
+enum AnalysisStatus: String, CaseIterable, Codable {
+    case processing = "PROCESSING"
+    case completed = "COMPLETED"
+    case failed = "FAILED"
+    
+    var displayName: String {
+        switch self {
+        case .processing:
+            return "處理中"
+        case .completed:
+            return "已完成"
+        case .failed:
+            return "失敗"
+        }
+    }
+    
+    var color: Color {
+        switch self {
+        case .processing:
+            return AppTheme.Colors.warning
+        case .completed:
+            return AppTheme.Colors.success
+        case .failed:
+            return AppTheme.Colors.error
+        }
+    }
+}
+
+ 

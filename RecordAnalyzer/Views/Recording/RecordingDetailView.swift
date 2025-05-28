@@ -7,6 +7,14 @@ struct RecordingDetailView: View {
     @State private var detailRecording: Recording
     @State private var isLoadingDetail = false
     @State private var loadError: String?
+    @State private var isRegeneratingTranscription = false
+    @State private var isRegeneratingSummary = false
+    @State private var showingHistory = false
+    @State private var historyType: AnalysisType = .transcription
+    @State private var regenerateError: String?
+    @State private var showRegenerateAlert = false
+    @State private var showRegenerateSuccess = false
+    @State private var regenerateSuccessMessage = ""
     @EnvironmentObject var recordingManager: RecordingManager
     
     private let networkService = NetworkService.shared
@@ -93,6 +101,21 @@ struct RecordingDetailView: View {
         .refreshable {
             await loadRecordingDetail()
         }
+        .sheet(isPresented: $showingHistory) {
+            AnalysisHistoryView(recordingId: detailRecording.id.uuidString, analysisType: historyType)
+        }
+        .alert("重新生成失敗", isPresented: $showRegenerateAlert) {
+            Button("確定", role: .cancel) {}
+        } message: {
+            if let error = regenerateError {
+                Text(error)
+            }
+        }
+        .alert("處理狀態", isPresented: $showRegenerateSuccess) {
+            Button("確定", role: .cancel) {}
+        } message: {
+            Text(regenerateSuccessMessage)
+        }
     }
     
     /// 與 RecordingManager 中的數據同步
@@ -160,6 +183,8 @@ struct RecordingDetailView: View {
                 self.updateRecordingInManager(fullRecording)
                 
                 print("📱 背景載入完成，內容已更新")
+                print("📝 逐字稿內容: \(fullRecording.transcription?.prefix(100) ?? "nil")")
+                print("📝 摘要內容: \(fullRecording.summary?.prefix(100) ?? "nil")")
             }
         } catch {
             await MainActor.run {
@@ -174,6 +199,143 @@ struct RecordingDetailView: View {
         if let index = recordingManager.recordings.firstIndex(where: { $0.id == updatedRecording.id }) {
             recordingManager.recordings[index] = updatedRecording
         }
+    }
+    
+    // MARK: - Regeneration Methods
+    private func regenerateTranscription() async {
+        await MainActor.run {
+            isRegeneratingTranscription = true
+            regenerateError = nil
+        }
+        
+        do {
+            let response = try await networkService.regenerateTranscription(recordingId: detailRecording.id.uuidString)
+            print("🔄 開始重新生成逐字稿: \(response.message)")
+            
+            // 顯示處理中的提示
+            await MainActor.run {
+                regenerateSuccessMessage = "逐字稿重新生成中，請稍候..."
+                showRegenerateSuccess = true
+            }
+            
+            // 開始輪詢狀態
+            let success = await pollForCompletion(isTranscription: true)
+            
+            if success {
+                await MainActor.run {
+                    regenerateSuccessMessage = "✅ 逐字稿重新生成完成！"
+                    showRegenerateSuccess = true
+                }
+            }
+            
+        } catch {
+            await MainActor.run {
+                regenerateError = error.localizedDescription
+                showRegenerateAlert = true
+                isRegeneratingTranscription = false
+            }
+        }
+    }
+    
+    private func regenerateSummary() async {
+        await MainActor.run {
+            isRegeneratingSummary = true
+            regenerateError = nil
+        }
+        
+        do {
+            let response = try await networkService.regenerateSummary(recordingId: detailRecording.id.uuidString)
+            print("🔄 開始重新生成摘要: \(response.message)")
+            
+            // 顯示處理中的提示
+            await MainActor.run {
+                regenerateSuccessMessage = "摘要重新生成中，請稍候..."
+                showRegenerateSuccess = true
+            }
+            
+            // 開始輪詢狀態
+            let success = await pollForCompletion(isTranscription: false)
+            
+            if success {
+                await MainActor.run {
+                    regenerateSuccessMessage = "✅ 摘要重新生成完成！"
+                    showRegenerateSuccess = true
+                }
+            }
+            
+        } catch {
+            await MainActor.run {
+                regenerateError = error.localizedDescription
+                showRegenerateAlert = true
+                isRegeneratingSummary = false
+            }
+        }
+    }
+    
+    private func pollForCompletion(isTranscription: Bool) async -> Bool {
+        var attempts = 0
+        let maxAttempts = 60 // 最多等待3分鐘
+        let delay: UInt64 = 3_000_000_000 // 3秒
+        var success = false
+        
+        while attempts < maxAttempts {
+            do {
+                try await Task.sleep(nanoseconds: delay)
+                
+                // 重新載入錄音詳情
+                let updatedRecording = try await networkService.getRecordingDetail(id: detailRecording.id.uuidString)
+                
+                await MainActor.run {
+                    self.detailRecording = updatedRecording
+                    self.updateRecordingInManager(updatedRecording)
+                    
+                    // 每10秒更新一次進度提示
+                    if attempts % 3 == 0 {
+                        let seconds = (attempts + 1) * 3
+                        let processType = isTranscription ? "逐字稿" : "摘要"
+                        self.regenerateSuccessMessage = "\(processType)處理中... 已等待 \(seconds) 秒"
+                        self.showRegenerateSuccess = true
+                    }
+                    
+                    // 檢查處理狀態
+                    if updatedRecording.status == "completed" {
+                        self.isRegeneratingTranscription = false
+                        self.isRegeneratingSummary = false
+                        print("✅ 重新生成完成")
+                        success = true
+                    }
+                }
+                
+                // 如果處理完成，跳出循環
+                if updatedRecording.status == "completed" {
+                    break
+                }
+                
+                attempts += 1
+                
+            } catch {
+                print("❌ 輪詢失敗: \(error.localizedDescription)")
+                await MainActor.run {
+                    self.regenerateError = "獲取狀態失敗: \(error.localizedDescription)"
+                    self.showRegenerateAlert = true
+                    self.isRegeneratingTranscription = false
+                    self.isRegeneratingSummary = false
+                }
+                break
+            }
+        }
+        
+        // 超時處理
+        if attempts >= maxAttempts {
+            await MainActor.run {
+                self.regenerateError = "處理超時，請稍後重試"
+                self.showRegenerateAlert = true
+                self.isRegeneratingTranscription = false
+                self.isRegeneratingSummary = false
+            }
+        }
+        
+        return success
     }
     
     private var recordingInfoContent: some View {
@@ -250,6 +412,35 @@ struct RecordingDetailView: View {
             delay: 0.3
         ) {
             VStack(alignment: .leading, spacing: 16) {
+                // 操作按鈕組
+                HStack(spacing: 12) {
+                    // 重新生成按鈕
+                    RegenerateButton(
+                        title: "重新生成",
+                        isLoading: isRegeneratingTranscription,
+                        gradient: AppTheme.Gradients.primary
+                    ) {
+                        Task {
+                            await regenerateTranscription()
+                        }
+                    }
+                    .disabled(isRegeneratingTranscription || detailRecording.status != "completed")
+                    
+                    // 歷史記錄按鈕
+                    Button(action: {
+                        historyType = .transcription
+                        showingHistory = true
+                    }) {
+                        Label("歷史記錄", systemImage: "clock.arrow.circlepath")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(AppTheme.Colors.primary)
+                    
+                    Spacer()
+                }
+                
                 if let transcription = detailRecording.transcription, !transcription.isEmpty {
                     if transcription == "可用" {
                         // 顯示背景載入狀態
@@ -261,6 +452,7 @@ struct RecordingDetailView: View {
                         )
                     } else {
                         // 優化的文本顯示
+                        let _ = print("🎯 顯示逐字稿，長度: \(transcription.count)")
                         ContentDisplayView(content: transcription, type: .transcription)
                     }
                 } else if isLoadingDetail {
@@ -297,6 +489,35 @@ struct RecordingDetailView: View {
                 delay: 0.3
             ) {
                 VStack(alignment: .leading, spacing: 16) {
+                    // 操作按鈕組
+                    HStack(spacing: 12) {
+                        // 重新生成按鈕
+                        RegenerateButton(
+                            title: "重新生成",
+                            isLoading: isRegeneratingSummary,
+                            gradient: AppTheme.Gradients.success
+                        ) {
+                            Task {
+                                await regenerateSummary()
+                            }
+                        }
+                        .disabled(isRegeneratingSummary || detailRecording.status != "completed")
+                        
+                        // 歷史記錄按鈕
+                        Button(action: {
+                            historyType = .summary
+                            showingHistory = true
+                        }) {
+                            Label("歷史記錄", systemImage: "clock.arrow.circlepath")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(AppTheme.Colors.success)
+                        
+                        Spacer()
+                    }
+                    
                     if let summary = detailRecording.summary, !summary.isEmpty {
                         if summary == "可用" {
                             ModernLoadingView(
@@ -1070,74 +1291,146 @@ struct ShareSheet: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
-/// 高性能文本視圖，支持大量文本的漸進加載
+/// 高性能分段文本視圖，使用虛擬化技術減少記憶體使用
 struct OptimizedTextView: View {
     let content: String
-    @State private var visibleRange: Range<String.Index>?
+    @State private var chunks: [TextChunk] = []
+    @State private var visibleChunks: Set<Int> = []
     @State private var isInitialized = false
     
-    private let initialChunkSize = 3000
-    private let chunkSize = 2000
+    private let chunkSize = 1000 // 每個區塊的字元數
+    private let visibleBuffer = 3 // 可見區域前後緩衝的區塊數
+    
+    struct TextChunk: Identifiable {
+        let id: Int
+        let text: String
+        let startIndex: String.Index
+        let endIndex: String.Index
+    }
     
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    if let range = visibleRange {
-                        Text(String(content[range]))
-                            .font(.body)
-                            .lineSpacing(6)
-                            .textSelection(.enabled)
-                            .foregroundColor(AppTheme.Colors.textPrimary)
-                            .id("content")
-                    } else if !isInitialized {
-                        // 骨架屏
-                        SkeletonTextView()
-                    }
-                    
-                    if shouldShowLoadMore {
-                        Button("載入更多內容") {
-                            loadMoreContent()
+                    if isInitialized {
+                        ForEach(chunks) { chunk in
+                            ChunkView(
+                                chunk: chunk,
+                                isVisible: visibleChunks.contains(chunk.id),
+                                onAppear: { markChunkVisible(chunk.id) },
+                                onDisappear: { markChunkInvisible(chunk.id) }
+                            )
                         }
-                        .font(.subheadline)
-                        .foregroundColor(AppTheme.Colors.primary)
-                        .padding(.top, 16)
+                    } else {
+                        SkeletonTextView()
                     }
                 }
                 .padding()
             }
         }
         .task {
-            await initializeContent()
+            await initializeChunks()
         }
     }
     
-    private var shouldShowLoadMore: Bool {
-        guard let range = visibleRange else { return false }
-        return range.upperBound < content.endIndex
-    }
-    
-    private func initializeContent() async {
+    private func initializeChunks() async {
         guard !content.isEmpty else { return }
         
-        let endIndex = content.index(content.startIndex, offsetBy: min(initialChunkSize, content.count))
-        
         await MainActor.run {
-            visibleRange = content.startIndex..<endIndex
+            var tempChunks: [TextChunk] = []
+            var currentIndex = content.startIndex
+            var chunkId = 0
+            
+            while currentIndex < content.endIndex {
+                let remainingDistance = content.distance(from: currentIndex, to: content.endIndex)
+                let chunkDistance = min(chunkSize, remainingDistance)
+                let endIndex = content.index(currentIndex, offsetBy: chunkDistance)
+                
+                let chunkText = String(content[currentIndex..<endIndex])
+                tempChunks.append(TextChunk(
+                    id: chunkId,
+                    text: chunkText,
+                    startIndex: currentIndex,
+                    endIndex: endIndex
+                ))
+                
+                currentIndex = endIndex
+                chunkId += 1
+            }
+            
+            chunks = tempChunks
+            // 初始化時顯示前幾個區塊
+            for i in 0..<min(5, chunks.count) {
+                visibleChunks.insert(i)
+            }
             isInitialized = true
+            
+            print("📊 文本分塊完成: \(chunks.count) 個區塊，每塊約 \(chunkSize) 字元")
         }
     }
     
-    private func loadMoreContent() {
-        guard let currentRange = visibleRange else { return }
+    private func markChunkVisible(_ id: Int) {
+        visibleChunks.insert(id)
         
-        let currentEnd = currentRange.upperBound
-        let newEndOffset = min(content.distance(from: content.startIndex, to: currentEnd) + chunkSize, content.count)
-        let newEndIndex = content.index(content.startIndex, offsetBy: newEndOffset)
-        
-        withAnimation(.easeInOut(duration: 0.3)) {
-            visibleRange = content.startIndex..<newEndIndex
+        // 預加載前後的區塊
+        for offset in 1...visibleBuffer {
+            if id - offset >= 0 {
+                visibleChunks.insert(id - offset)
+            }
+            if id + offset < chunks.count {
+                visibleChunks.insert(id + offset)
+            }
         }
+    }
+    
+    private func markChunkInvisible(_ id: Int) {
+        // 延遲移除，避免滾動時頻繁載入/卸載
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            // 檢查是否真的不在可見範圍內
+            let visibleRange = (id - visibleBuffer)...(id + visibleBuffer)
+            let shouldRemove = !visibleChunks.contains { visibleRange.contains($0) }
+            
+            if shouldRemove {
+                visibleChunks.remove(id)
+            }
+        }
+    }
+}
+
+// 單個文本區塊視圖
+struct ChunkView: View {
+    let chunk: OptimizedTextView.TextChunk
+    let isVisible: Bool
+    let onAppear: () -> Void
+    let onDisappear: () -> Void
+    
+    var body: some View {
+        Group {
+            if isVisible {
+                Text(chunk.text)
+                    .font(.body)
+                    .lineSpacing(6)
+                    .textSelection(.enabled)
+                    .foregroundColor(AppTheme.Colors.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .id(chunk.id)
+            } else {
+                // 佔位符，保持滾動位置
+                Color.clear
+                    .frame(height: estimatedHeight)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+        .onAppear { onAppear() }
+        .onDisappear { onDisappear() }
+    }
+    
+    private var estimatedHeight: CGFloat {
+        // 估算文本高度（基於平均行高和字元數）
+        let averageCharsPerLine: CGFloat = 40
+        let lineHeight: CGFloat = 24
+        let estimatedLines = CGFloat(chunk.text.count) / averageCharsPerLine
+        return estimatedLines * lineHeight
     }
 }
 

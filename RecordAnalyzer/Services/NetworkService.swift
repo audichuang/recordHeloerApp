@@ -1,5 +1,6 @@
 import Foundation
 import ObjectiveC
+import SwiftUI
 
 // MARK: - API Response Models
 struct APIResponse<T: Codable>: Codable {
@@ -850,6 +851,60 @@ class NetworkService: ObservableObject {
         }
     }
     
+    // MARK: - Analysis Regeneration APIs
+    /// 重新生成逐字稿
+    func regenerateTranscription(recordingId: String, provider: String? = nil) async throws -> RegenerateResponse {
+        var requestBody: [String: Any] = [:]
+        if let provider = provider {
+            requestBody["provider"] = provider
+        }
+        
+        let requestData = try JSONSerialization.data(withJSONObject: requestBody)
+        
+        return try await performRequest(
+            endpoint: "/analysis/\(recordingId)/regenerate-transcription",
+            method: .POST,
+            body: requestData,
+            requiresAuth: true,
+            responseType: RegenerateResponse.self
+        )
+    }
+    
+    /// 重新生成摘要
+    func regenerateSummary(recordingId: String, provider: String? = nil) async throws -> RegenerateResponse {
+        var requestBody: [String: Any] = [:]
+        if let provider = provider {
+            requestBody["provider"] = provider
+        }
+        
+        let requestData = try JSONSerialization.data(withJSONObject: requestBody)
+        
+        return try await performRequest(
+            endpoint: "/analysis/\(recordingId)/regenerate-summary",
+            method: .POST,
+            body: requestData,
+            requiresAuth: true,
+            responseType: RegenerateResponse.self
+        )
+    }
+    
+    /// 獲取分析歷史記錄
+    func getAnalysisHistory(recordingId: String, analysisType: AnalysisType? = nil) async throws -> [AnalysisHistory] {
+        var endpoint = "/analysis/\(recordingId)/history"
+        
+        if let type = analysisType {
+            // 轉換為後端 API 期望的大寫格式
+            let typeValue = type == .transcription ? "TRANSCRIPTION" : "SUMMARY"
+            endpoint += "?analysis_type=\(typeValue)"
+        }
+        
+        return try await performRequest(
+            endpoint: endpoint,
+            requiresAuth: true,
+            responseType: [AnalysisHistory].self
+        )
+    }
+    
     // MARK: - Helper Methods
     // 根據檔案擴展名獲取MIME類型
     private func mimeTypeForFileExtension(_ fileExtension: String) -> String {
@@ -980,6 +1035,20 @@ struct RecordingResponse: Codable {
     let created_at: String
     let transcript: String?
     let summary: String?
+}
+
+// MARK: - Analysis Models
+/// 重新生成響應
+struct RegenerateResponse: Codable {
+    let taskId: String
+    let message: String
+    let status: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case taskId = "history_id"  // 後端返回的是 history_id
+        case message
+        case status
+    }
 }
 
 // MARK: - Upload Delegate
