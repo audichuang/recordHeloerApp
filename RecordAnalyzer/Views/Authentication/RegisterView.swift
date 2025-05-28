@@ -73,15 +73,23 @@ struct RegisterView: View {
                         .padding(.bottom, keyboardHeight > 0 ? keyboardHeight + 20 : 50)
                     }
                     .scrollDismissesKeyboard(.interactively)
-                    .animation(.easeInOut(duration: 0.3), value: keyboardHeight)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.8, blendDuration: 0.1), value: keyboardHeight)
+                    .animation(.easeInOut(duration: 0.2), value: animateCards)
                     
-                    // 監聽焦點變化 - 只在必要時進行輕微調整
+                    // 監聽焦點變化 - 優化響應速度和動畫
                     .onChange(of: focusedField) { newValue in
                         activeField = newValue
+                        
+                        // 添加輕微的觸覺反饋
+                        if newValue != nil {
+                            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                            impactFeedback.impactOccurred()
+                        }
+                        
                         // 只在確認密碼獲得焦點時進行輕微調整
                         if newValue == .confirmPassword && keyboardHeight > 0 {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                withAnimation(.easeInOut(duration: 0.3)) {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
                                     scrollProxy.scrollTo("buttons", anchor: .bottom)
                                 }
                             }
@@ -118,9 +126,15 @@ struct RegisterView: View {
     }
     
     private func dismissKeyboard() {
+        // 添加輕微觸覺反饋
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.impactOccurred()
+        
         // 清除焦點狀態
-        activeField = nil
-        focusedField = nil
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            activeField = nil
+            focusedField = nil
+        }
         
         // 收起鍵盤
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
@@ -252,7 +266,10 @@ struct RegisterFormCard: View {
                 // 密碼不一致提示
                 if password != confirmPassword && !confirmPassword.isEmpty {
                     PasswordMismatchWarning()
-                        .transition(.scale.combined(with: .opacity))
+                        .transition(.asymmetric(
+            insertion: .scale(scale: 0.8).combined(with: .opacity),
+            removal: .scale(scale: 1.1).combined(with: .opacity)
+        ).animation(.spring(response: 0.4, dampingFraction: 0.8)))
                 }
                 
                 // 錯誤訊息
@@ -306,8 +323,10 @@ struct UsernameInputField: View {
                     .fill(AppTheme.Colors.cardHighlight)
                     .stroke(
                         focusedField == .username ? AppTheme.Colors.secondary : Color.clear,
-                        lineWidth: 2
+                        lineWidth: focusedField == .username ? 2 : 0
                     )
+                    .scaleEffect(focusedField == .username ? 1.02 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: focusedField == .username)
             )
             .onTapGesture {
                 focusedField = .username
@@ -357,8 +376,10 @@ struct RegisterEmailField: View {
                     .fill(AppTheme.Colors.cardHighlight)
                     .stroke(
                         focusedField == .email ? AppTheme.Colors.secondary : Color.clear,
-                        lineWidth: 2
+                        lineWidth: focusedField == .email ? 2 : 0
                     )
+                    .scaleEffect(focusedField == .email ? 1.02 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: focusedField == .email)
             )
             .onTapGesture {
                 focusedField = .email
@@ -430,8 +451,10 @@ struct RegisterPasswordField: View {
                     .fill(AppTheme.Colors.cardHighlight)
                     .stroke(
                         focusedField == .password ? AppTheme.Colors.secondary : Color.clear,
-                        lineWidth: 2
+                        lineWidth: focusedField == .password ? 2 : 0
                     )
+                    .scaleEffect(focusedField == .password ? 1.02 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: focusedField == .password)
             )
             .onTapGesture {
                 focusedField = .password
@@ -497,8 +520,10 @@ struct ConfirmPasswordField: View {
                     .fill(AppTheme.Colors.cardHighlight)
                     .stroke(
                         focusedField == .confirmPassword ? AppTheme.Colors.secondary : Color.clear,
-                        lineWidth: 2
+                        lineWidth: focusedField == .confirmPassword ? 2 : 0
                     )
+                    .scaleEffect(focusedField == .confirmPassword ? 1.02 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: focusedField == .confirmPassword)
             )
             .onTapGesture {
                 focusedField = .confirmPassword
@@ -580,6 +605,10 @@ struct RegisterButtonsRow: View {
                 title: "註冊",
                 icon: authManager.isLoading ? nil : "checkmark",
                 action: {
+                    // 添加觸覺反饋
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                    impactFeedback.impactOccurred()
+                    
                     // 先關閉鍵盤
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     
@@ -597,6 +626,8 @@ struct RegisterButtonsRow: View {
                 gradient: AppTheme.Gradients.secondary,
                 isDisabled: !isFormValid
             )
+            .scaleEffect(authManager.isLoading ? 0.98 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: authManager.isLoading)
             .frame(maxWidth: .infinity)
         }
         .padding(.top, 10)

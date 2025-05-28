@@ -153,8 +153,10 @@ struct LoginView: View {
                                                 .fill(AppTheme.Colors.cardHighlight)
                                                 .stroke(
                                                     isEmailFocused ? AppTheme.Colors.primary : Color.clear,
-                                                    lineWidth: 2
+                                                    lineWidth: isEmailFocused ? 2 : 0
                                                 )
+                                                .scaleEffect(isEmailFocused ? 1.02 : 1.0)
+                                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isEmailFocused)
                                         )
                                         .onTapGesture {
                                             activeField = .email
@@ -219,8 +221,10 @@ struct LoginView: View {
                                                 .fill(AppTheme.Colors.cardHighlight)
                                                 .stroke(
                                                     isPasswordFocused ? AppTheme.Colors.primary : Color.clear,
-                                                    lineWidth: 2
+                                                    lineWidth: isPasswordFocused ? 2 : 0
                                                 )
+                                                .scaleEffect(isPasswordFocused ? 1.02 : 1.0)
+                                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPasswordFocused)
                                         )
                                         .onTapGesture {
                                             activeField = .password
@@ -248,6 +252,10 @@ struct LoginView: View {
                                         title: "登入",
                                         icon: authManager.isLoading ? nil : "arrow.right",
                                         action: {
+                                            // 添加觸覺反饋
+                                            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                                            impactFeedback.impactOccurred()
+                                            
                                             dismissKeyboard()
                                             Task {
                                                 await authManager.login(email: email, password: password)
@@ -256,6 +264,8 @@ struct LoginView: View {
                                         gradient: AppTheme.Gradients.primary,
                                         isDisabled: authManager.isLoading || email.isEmpty || password.isEmpty
                                     )
+                                    .scaleEffect(authManager.isLoading ? 0.98 : 1.0)
+                                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: authManager.isLoading)
                                     .padding(.top, 10)
                                     .id("loginButton")
                                     
@@ -278,17 +288,31 @@ struct LoginView: View {
                             }
                             .padding(.horizontal)
                             
-                            // 確保有足夠空間讓系統鍵盤避讓機制工作
-                            Spacer(minLength: 150)
+                            // 確保有足夠空間避免鍵盤遮擋
+                            Spacer(minLength: keyboardHeight > 0 ? 200 : 80)
                         }
-                        .padding(.bottom, 50)
+                        .padding(.bottom, keyboardHeight > 0 ? keyboardHeight + 20 : 50)
                     }
                     .scrollDismissesKeyboard(.interactively)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.8, blendDuration: 0.1), value: keyboardHeight)
+                    .animation(.easeInOut(duration: 0.2), value: animateCards)
                     
-                    // 監聽焦點變化 - 智能滾動邏輯
+                    // 監聽焦點變化 - 優化響應速度和動畫
                     .onChange(of: activeField) { newValue in
-                        // 只在鍵盤剛出現時進行初次滾動
-                        // 後續輸入框切換不再滾動，避免累積移動
+                        // 添加輕微的觸覺反饋
+                        if newValue != nil {
+                            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                            impactFeedback.impactOccurred()
+                        }
+                        
+                        // 只在密碼欄位獲得焦點且鍵盤已出現時進行輕微調整
+                        if newValue == .password && keyboardHeight > 0 {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
+                                    scrollProxy.scrollTo("loginButton", anchor: .bottom)
+                                }
+                            }
+                        }
                     }
                     
                     // 監聽 Email 焦點狀態
@@ -336,10 +360,16 @@ struct LoginView: View {
     }
     
     private func dismissKeyboard() {
+        // 添加輕微觸覺反饋
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.impactOccurred()
+        
         // 清除焦點狀態
-        activeField = nil
-        isEmailFocused = false
-        isPasswordFocused = false
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            activeField = nil
+            isEmailFocused = false
+            isPasswordFocused = false
+        }
         
         // 收起鍵盤
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
