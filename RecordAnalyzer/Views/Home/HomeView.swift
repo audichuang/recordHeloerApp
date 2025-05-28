@@ -11,6 +11,11 @@ struct HomeView: View {
     @State private var errorMessage: String?
     @State private var showingErrorAlert = false
     @State private var animateCards = false
+    @State private var selectedRecording: Recording?
+    @State private var showingEditDialog = false
+    @State private var showingDeleteAlert = false
+    @State private var editingTitle = ""
+    @State private var isSaving = false
     @Binding var selectedTab: Int
     
     // 為預覽提供預設初始化器
@@ -157,6 +162,27 @@ struct HomeView: View {
             }
         } message: {
             Text(errorMessage ?? "未知錯誤")
+        }
+        .alert("編輯標題", isPresented: $showingEditDialog) {
+            TextField("錄音標題", text: $editingTitle)
+            Button("取消", role: .cancel) { }
+            Button("儲存") {
+                Task {
+                    await self.updateRecordingTitle()
+                }
+            }
+        } message: {
+            Text("請輸入新的錄音標題")
+        }
+        .alert("刪除錄音", isPresented: $showingDeleteAlert) {
+            Button("取消", role: .cancel) { }
+            Button("刪除", role: .destructive) {
+                Task {
+                    await self.deleteRecording()
+                }
+            }
+        } message: {
+            Text("確定要刪除「\(selectedRecording?.title ?? "")」嗎？此操作無法復原。")
         }
     }
     
@@ -422,6 +448,22 @@ struct HomeView: View {
                             RecordingRowView(recording: recording)
                         }
                         .buttonStyle(PlainButtonStyle())
+                        .contextMenu {
+                            Button(action: {
+                                selectedRecording = recording
+                                editingTitle = recording.title
+                                showingEditDialog = true
+                            }) {
+                                Label("編輯標題", systemImage: "pencil")
+                            }
+                            
+                            Button(role: .destructive, action: {
+                                selectedRecording = recording
+                                showingDeleteAlert = true
+                            }) {
+                                Label("刪除錄音", systemImage: "trash")
+                            }
+                        }
                     }
                 }
             }
@@ -452,6 +494,49 @@ struct GradientProgressStyle: ProgressViewStyle {
                     )
                 )
         }
+    }
+}
+
+extension HomeView {
+    /// 更新錄音標題
+    private func updateRecordingTitle() async {
+        guard let recording = self.selectedRecording,
+              !self.editingTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+        
+        self.isSaving = true
+        
+        do {
+            try await NetworkService.shared.updateRecordingTitle(
+                recordingId: recording.id.uuidString,
+                newTitle: self.editingTitle
+            )
+            
+            // 更新本地數據
+            await MainActor.run {
+                if let index = self.recordingManager.recordings.firstIndex(where: { $0.id == recording.id }) {
+                    self.recordingManager.recordings[index].title = self.editingTitle
+                }
+                
+                self.selectedRecording = nil
+                self.isSaving = false
+            }
+        } catch {
+            await MainActor.run {
+                // 顯示錯誤（可以添加錯誤提示）
+                print("更新標題失敗: \(error.localizedDescription)")
+                self.isSaving = false
+            }
+        }
+    }
+    
+    /// 刪除錄音
+    private func deleteRecording() async {
+        guard let recording = self.selectedRecording else { return }
+        
+        await self.recordingManager.deleteRecording(recording)
+        self.selectedRecording = nil
     }
 }
 

@@ -8,6 +8,11 @@ struct HistoryView: View {
     @State private var cachedFilteredRecordings: [Recording] = []
     @State private var lastSearchText = ""
     @State private var lastSortOption: SortOption = .dateDescending
+    @State private var selectedRecording: Recording?
+    @State private var showingEditDialog = false
+    @State private var showingDeleteAlert = false
+    @State private var editingTitle = ""
+    @State private var isSaving = false
     
     enum SortOption: String, CaseIterable {
         case dateDescending = "最新優先"
@@ -58,6 +63,27 @@ struct HistoryView: View {
         }
         .onAppear {
             loadDataIfNeeded()
+        }
+        .alert("編輯標題", isPresented: $showingEditDialog) {
+            TextField("錄音標題", text: $editingTitle)
+            Button("取消", role: .cancel) { }
+            Button("儲存") {
+                Task {
+                    await updateRecordingTitle()
+                }
+            }
+        } message: {
+            Text("請輸入新的錄音標題")
+        }
+        .alert("刪除錄音", isPresented: $showingDeleteAlert) {
+            Button("取消", role: .cancel) { }
+            Button("刪除", role: .destructive) {
+                Task {
+                    await deleteRecording()
+                }
+            }
+        } message: {
+            Text("確定要刪除「\(selectedRecording?.title ?? "")」嗎？此操作無法復原。")
         }
     }
     
@@ -143,6 +169,22 @@ struct HistoryView: View {
                         }
                         .buttonStyle(PlainButtonStyle())
                         .id(recording.id) // 加入ID以提升導航性能
+                        .contextMenu {
+                            Button(action: {
+                                selectedRecording = recording
+                                editingTitle = recording.title
+                                showingEditDialog = true
+                            }) {
+                                Label("編輯標題", systemImage: "pencil")
+                            }
+                            
+                            Button(role: .destructive, action: {
+                                selectedRecording = recording
+                                showingDeleteAlert = true
+                            }) {
+                                Label("刪除錄音", systemImage: "trash")
+                            }
+                        }
                     }
                 }
                 .animation(.spring(response: 0.6, dampingFraction: 0.8), value: filteredAndSortedRecordings.count)
@@ -348,6 +390,56 @@ struct HistoryView: View {
         Task {
             // 使用輕量級的摘要API進行初始載入
             await recordingManager.loadRecordingsSummary()
+        }
+    }
+    
+    /// 更新錄音標題
+    private func updateRecordingTitle() async {
+        guard let recording = selectedRecording,
+              !editingTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+        
+        isSaving = true
+        
+        do {
+            try await NetworkService.shared.updateRecordingTitle(
+                recordingId: recording.id.uuidString,
+                newTitle: editingTitle
+            )
+            
+            // 更新本地數據
+            await MainActor.run {
+                if let index = recordingManager.recordings.firstIndex(where: { $0.id == recording.id }) {
+                    recordingManager.recordings[index].title = editingTitle
+                }
+                
+                // 清除緩存以刷新列表
+                cachedFilteredRecordings = []
+                selectedRecording = nil
+                isSaving = false
+            }
+        } catch {
+            await MainActor.run {
+                // 顯示錯誤（可以添加錯誤提示）
+                print("更新標題失敗: \(error.localizedDescription)")
+                isSaving = false
+            }
+        }
+    }
+    
+    /// 刪除錄音
+    private func deleteRecording() async {
+        guard let recording = selectedRecording else { return }
+        
+        do {
+            await recordingManager.deleteRecording(recording)
+            
+            await MainActor.run {
+                // 清除緩存以刷新列表
+                cachedFilteredRecordings = []
+                selectedRecording = nil
+            }
         }
     }
 }

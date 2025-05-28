@@ -8,6 +8,7 @@ class AuthenticationManager: ObservableObject {
     @Published var currentUser: User?
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var isCheckingAuth = true  // 新增：檢查認證狀態中
     
     private let networkService = NetworkService.shared
     
@@ -15,8 +16,21 @@ class AuthenticationManager: ObservableObject {
     private let dataStore = AuthDataStore()
     
     init() {
-        Task {
-            await checkSavedAuthState()
+        // 監聽未授權訪問通知
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleUnauthorizedAccess),
+            name: .unauthorizedAccess,
+            object: nil
+        )
+    }
+    
+    @objc private func handleUnauthorizedAccess() {
+        print("🔒 收到未授權訪問通知，執行登出")
+        Task { @MainActor in
+            currentUser = nil
+            isAuthenticated = false
+            await dataStore.clearUser()
         }
     }
     
@@ -78,6 +92,34 @@ class AuthenticationManager: ObservableObject {
             isAuthenticated = false
             await dataStore.clearUser()
         }
+    }
+    
+    // 新增：檢查令牌有效性
+    func verifyAuthenticationStatus() async {
+        isCheckingAuth = true
+        
+        // 先檢查是否有保存的令牌
+        if let token = UserDefaults.standard.string(forKey: "auth_token") {
+            print("發現保存的令牌，嘗試驗證...")
+            
+            do {
+                let currentUser = try await networkService.getCurrentUser()
+                self.currentUser = currentUser
+                self.isAuthenticated = true
+                print("令牌有效，已自動登入用戶: \(currentUser.username)")
+                
+                // 更新本地保存的用戶信息
+                await dataStore.saveUser(currentUser)
+            } catch {
+                print("令牌驗證失敗: \(error)")
+                // Token無效，清除本地狀態
+                await dataStore.clearUser()
+                self.currentUser = nil
+                self.isAuthenticated = false
+            }
+        }
+        
+        isCheckingAuth = false
     }
     
     private func checkSavedAuthState() async {

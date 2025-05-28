@@ -162,31 +162,40 @@ struct RecordAnalyzerApp: App {
     @StateObject private var notificationService = NotificationService.shared
     @State private var incomingFileURL: URL?
     @State private var showingFileImport = false
+    @State private var showingSplash = true
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(authManager)
-                .environmentObject(recordingManager)
-                .environmentObject(notificationService)
-                .sheet(isPresented: $showingFileImport) {
-                    if let fileURL = incomingFileURL {
-                        FileImportView(fileURL: fileURL) {
-                            // 文件處理完成後清理
-                            incomingFileURL = nil
-                            showingFileImport = false
-                        }
-                        .environmentObject(recordingManager)
+            ZStack {
+                if showingSplash || authManager.isCheckingAuth {
+                    SplashView()
+                        .transition(.opacity)
+                } else {
+                    ContentView()
                         .environmentObject(authManager)
-                    }
+                        .environmentObject(recordingManager)
+                        .environmentObject(notificationService)
+                        .sheet(isPresented: $showingFileImport) {
+                            if let fileURL = incomingFileURL {
+                                FileImportView(fileURL: fileURL) {
+                                    // 文件處理完成後清理
+                                    incomingFileURL = nil
+                                    showingFileImport = false
+                                }
+                                .environmentObject(recordingManager)
+                                .environmentObject(authManager)
+                            }
+                        }
+                        .onOpenURL { url in
+                            handleIncomingURL(url)
+                        }
                 }
-                .onOpenURL { url in
-                    handleIncomingURL(url)
-                }
-                .onAppear {
-                    setupFileImportHandling()
-                    setupNotifications()
-                }
+            }
+            .onAppear {
+                setupFileImportHandling()
+                setupNotifications()
+                checkAuthenticationStatus()
+            }
         }
         .handlesExternalEvents(matching: Set(arrayLiteral: "*"))
     }
@@ -221,6 +230,25 @@ struct RecordAnalyzerApp: App {
         
         // 設置通知代理，處理通知點擊事件
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
+    }
+    
+    private func checkAuthenticationStatus() {
+        print("🔐 檢查認證狀態...")
+        
+        Task {
+            // 執行認證檢查
+            await authManager.verifyAuthenticationStatus()
+            
+            // 延遲一點讓動畫更流暢
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5秒
+            
+            // 隱藏啟動畫面
+            await MainActor.run {
+                withAnimation(.easeOut(duration: 0.3)) {
+                    showingSplash = false
+                }
+            }
+        }
     }
 }
 

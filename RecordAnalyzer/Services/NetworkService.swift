@@ -2,6 +2,11 @@ import Foundation
 import ObjectiveC
 import SwiftUI
 
+// MARK: - Notification Names
+extension Notification.Name {
+    static let unauthorizedAccess = Notification.Name("unauthorizedAccess")
+}
+
 // MARK: - API Response Models
 struct APIResponse<T: Codable>: Codable {
     let data: T?
@@ -150,13 +155,16 @@ class NetworkService: ObservableObject {
         requiresAuth: Bool = false,
         responseType: T.Type
     ) async throws -> T {
+        // 確保 endpoint 沒有尾部斜線（除非是根路徑）
+        let cleanEndpoint = endpoint.hasSuffix("/") && endpoint != "/" ? String(endpoint.dropLast()) : endpoint
+        
         guard let request = buildRequest(
-            endpoint: endpoint,
+            endpoint: cleanEndpoint,
             method: method,
             body: body,
             requiresAuth: requiresAuth
         ) else {
-            print("⚠️ 無效的URL: \(baseURL)\(endpoint)")
+            print("⚠️ 無效的URL: \(baseURL)\(cleanEndpoint)")
             throw NetworkError.invalidURL
         }
         
@@ -205,8 +213,12 @@ class NetworkService: ObservableObject {
                     throw NetworkError.decodingError
                 }
             case 401:
-                print("🔒 未授權(401): 清除授權令牌")
+                print("🔒 未授權(401): 清除授權令牌並通知登出")
                 clearAuthToken()
+                // 發送通知讓 AuthenticationManager 處理登出
+                await MainActor.run {
+                    NotificationCenter.default.post(name: .unauthorizedAccess, object: nil)
+                }
                 throw NetworkError.unauthorized
             case 403:
                 print("🚫 拒絕訪問(403): 請確認用戶權限")
@@ -764,7 +776,7 @@ class NetworkService: ObservableObject {
     func deleteRecording(id: UUID) async throws {
         print("🗑️ 嘗試刪除錄音: \(id.uuidString)")
         let _: EmptyResponse = try await performRequest(
-            endpoint: "/recordings/\(id.uuidString)/", // 添加尾部斜線
+            endpoint: "/recordings/\(id.uuidString)", // 移除尾部斜線
             method: .DELETE,
             requiresAuth: true,
             responseType: EmptyResponse.self
@@ -903,6 +915,31 @@ class NetworkService: ObservableObject {
             requiresAuth: true,
             responseType: [AnalysisHistory].self
         )
+    }
+    
+    /// 更新錄音標題
+    func updateRecordingTitle(recordingId: String, newTitle: String) async throws {
+        struct UpdateTitleRequest: Codable {
+            let title: String
+        }
+        
+        struct UpdateTitleResponse: Codable {
+            let message: String
+            let title: String
+        }
+        
+        let requestBody = UpdateTitleRequest(title: newTitle)
+        let requestData = try JSONEncoder().encode(requestBody)
+        
+        let _: UpdateTitleResponse = try await performRequest(
+            endpoint: "/recordings/\(recordingId)/title",
+            method: .PUT,
+            body: requestData,
+            requiresAuth: true,
+            responseType: UpdateTitleResponse.self
+        )
+        
+        print("✅ 成功更新錄音標題: \(recordingId) -> \(newTitle)")
     }
     
     // MARK: - Helper Methods

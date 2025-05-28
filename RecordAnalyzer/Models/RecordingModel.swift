@@ -175,7 +175,7 @@ struct RecordingSummary: Identifiable, Codable, Equatable, Sendable {
 
 struct Recording: Identifiable, Codable, Equatable, Sendable {
     var id: UUID
-    let title: String
+    var title: String
     let originalFilename: String
     let format: String
     let mimeType: String
