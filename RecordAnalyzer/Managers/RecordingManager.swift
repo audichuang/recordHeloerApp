@@ -19,9 +19,20 @@ class RecordingManager: ObservableObject {
     
     // 定時刷新
     private var refreshTimer: Timer?
-    private var shouldAutoRefresh = false
+    var shouldAutoRefresh = false
     private var lastRefreshTime: Date = Date(timeIntervalSince1970: 0)
     private let minimumRefreshInterval: TimeInterval = 15.0 // 最少15秒間隔
+    
+    // 添加控制方法來暫停/恢復自動刷新
+    func stopMonitoringForProcessing() {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+    }
+    
+    func startMonitoringForProcessing() {
+        guard shouldAutoRefresh else { return }
+        startAutoRefresh()
+    }
     
     init() {
         recordings = []
@@ -91,15 +102,6 @@ class RecordingManager: ObservableObject {
         }
     }
     
-    /// 上傳錄音後開始監控
-    func startMonitoringForProcessing() {
-        shouldAutoRefresh = true
-    }
-    
-    /// 停止監控
-    func stopMonitoringForProcessing() {
-        shouldAutoRefresh = false
-    }
     
     func uploadRecording(fileURL: URL, title: String) async -> Recording? {
         isUploading = true

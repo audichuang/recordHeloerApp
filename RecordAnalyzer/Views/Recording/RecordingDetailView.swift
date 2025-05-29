@@ -26,6 +26,41 @@ struct RecordingDetailView: View {
     }
     
     var body: some View {
+        mainContent
+            .background(AppTheme.Colors.background)
+            .navigationTitle(detailRecording.title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    shareButton
+                }
+            }
+            .onAppear(perform: handleOnAppear)
+            .onDisappear(perform: handleOnDisappear)
+            .onChange(of: recordingManager.recordings) { oldRecordings, newRecordings in
+                handleRecordingsChange(oldRecordings: oldRecordings, newRecordings: newRecordings)
+            }
+            .refreshable {
+                await loadRecordingDetail()
+            }
+            .sheet(isPresented: $showingHistory) {
+                AnalysisHistoryView(recordingId: detailRecording.id.uuidString, analysisType: historyType)
+            }
+            .alert("重新生成失敗", isPresented: $showRegenerateAlert) {
+                Button("確定", role: .cancel) {}
+            } message: {
+                if let error = regenerateError {
+                    Text(error)
+                }
+            }
+            .alert("處理狀態", isPresented: $showRegenerateSuccess) {
+                Button("確定", role: .cancel) {}
+            } message: {
+                Text(regenerateSuccessMessage)
+            }
+    }
+    
+    private var mainContent: some View {
         ScrollView {
             VStack(spacing: 25) {
                 // 錄音資訊卡片
@@ -57,71 +92,58 @@ struct RecordingDetailView: View {
             }
             .padding()
         }
-        .background(AppTheme.Colors.background)
-        .navigationTitle(detailRecording.title)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                shareButton
+    }
+    
+    private func handleOnAppear() {
+        // 暫停自動刷新以避免數據更新造成視圖跳出
+        recordingManager.stopMonitoringForProcessing()
+        
+        // 立即顯示現有內容，不阻塞UI
+        syncWithRecordingManager()
+        
+        // 檢查是否需要載入完整詳細內容
+        let needsDetailLoading = checkIfNeedsDetailLoading()
+        
+        if needsDetailLoading {
+            print("📱 DetailView首次載入，在背景中獲取完整內容")
+            // 不設置 isLoadingDetail = true，避免阻塞UI
+            Task {
+                await loadRecordingDetailInBackground()
             }
+        } else {
+            print("📱 DetailView已有完整內容，無需重新載入")
         }
-        .onAppear {
-            // 立即顯示現有內容，不阻塞UI
-            syncWithRecordingManager()
+    }
+    
+    private func handleOnDisappear() {
+        // 恢復自動刷新
+        recordingManager.startMonitoringForProcessing()
+    }
+    
+    private func handleRecordingsChange(oldRecordings: [Recording], newRecordings: [Recording]) {
+        // 只在狀態變化時同步，避免覆蓋詳細內容
+        if let updatedRecording = newRecordings.first(where: { $0.id == detailRecording.id }) {
+            // 檢查是否有實質性變化
+            let oldRecording = oldRecordings.first(where: { $0.id == detailRecording.id })
             
-            // 檢查是否需要載入完整詳細內容
-            let needsDetailLoading = checkIfNeedsDetailLoading()
-            
-            if needsDetailLoading {
-                print("📱 DetailView首次載入，在背景中獲取完整內容")
-                // 不設置 isLoadingDetail = true，避免阻塞UI
-                Task {
-                    await loadRecordingDetailInBackground()
-                }
-            } else {
-                print("📱 DetailView已有完整內容，無需重新載入")
-            }
-        }
-        .onChange(of: recordingManager.recordings) { oldRecordings, newRecordings in
-            // 只在狀態變化時同步，避免覆蓋詳細內容
-            if let updatedRecording = newRecordings.first(where: { $0.id == detailRecording.id }) {
-                // 檢查是否有實質性變化
-                let oldRecording = oldRecordings.first(where: { $0.id == detailRecording.id })
-                
-                // 只在狀態或內容有變化時更新
-                if oldRecording?.status != updatedRecording.status ||
-                   oldRecording?.transcription != updatedRecording.transcription ||
-                   oldRecording?.summary != updatedRecording.summary {
-                    print("📱 檢測到錄音內容變化，同步更新")
+            // 只在狀態或內容有變化時更新，使用 withAnimation 控制
+            if oldRecording?.status != updatedRecording.status ||
+               (oldRecording?.transcription?.isEmpty ?? true) != (updatedRecording.transcription?.isEmpty ?? true) ||
+               (oldRecording?.summary?.isEmpty ?? true) != (updatedRecording.summary?.isEmpty ?? true) {
+                print("📱 檢測到錄音內容變化，同步更新")
+                // 使用 .none 動畫避免視圖跳動
+                withAnimation(.none) {
                     syncWithRecordingManager()
-                    
-                    // 如果狀態變為已完成且沒有完整內容，重新載入詳情
-                    if updatedRecording.status == "completed" && checkIfNeedsDetailLoading() {
-                        print("📱 錄音處理完成，載入完整內容")
-                        Task {
-                            await loadRecordingDetailInBackground()
-                        }
+                }
+                
+                // 如果狀態變為已完成且沒有完整內容，重新載入詳情
+                if updatedRecording.status == "completed" && checkIfNeedsDetailLoading() {
+                    print("📱 錄音處理完成，載入完整內容")
+                    Task {
+                        await loadRecordingDetailInBackground()
                     }
                 }
             }
-        }
-        .refreshable {
-            await loadRecordingDetail()
-        }
-        .sheet(isPresented: $showingHistory) {
-            AnalysisHistoryView(recordingId: detailRecording.id.uuidString, analysisType: historyType)
-        }
-        .alert("重新生成失敗", isPresented: $showRegenerateAlert) {
-            Button("確定", role: .cancel) {}
-        } message: {
-            if let error = regenerateError {
-                Text(error)
-            }
-        }
-        .alert("處理狀態", isPresented: $showRegenerateSuccess) {
-            Button("確定", role: .cancel) {}
-        } message: {
-            Text(regenerateSuccessMessage)
         }
     }
     
@@ -129,8 +151,6 @@ struct RecordingDetailView: View {
     private func syncWithRecordingManager() {
         if let updatedRecording = recordingManager.recordings.first(where: { $0.id == detailRecording.id }) {
             let oldStatus = detailRecording.status
-            let oldTranscription = detailRecording.transcription
-            let oldSummary = detailRecording.summary
             
             // 避免不必要的更新
             guard updatedRecording != detailRecording else { return }
@@ -1167,7 +1187,7 @@ struct ModernLoadingView: View {
                     )
                     .frame(width: 60, height: 60)
                     .rotationEffect(.degrees(isAnimating ? 360 : 0))
-                    .animation(.linear(duration: 1).repeatForever(autoreverses: false), value: isAnimating)
+                    .animation(isAnimating ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: isAnimating)
                 
                 Image(systemName: icon)
                     .font(.system(size: 20))
@@ -1190,6 +1210,9 @@ struct ModernLoadingView: View {
         .padding(.vertical, 30)
         .onAppear {
             isAnimating = true
+        }
+        .onDisappear {
+            isAnimating = false
         }
     }
 }

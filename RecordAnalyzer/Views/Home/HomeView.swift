@@ -224,7 +224,7 @@ struct HomeView: View {
                     Image(systemName: "waveform")
                         .font(.system(size: 28))
                         .foregroundColor(.white)
-                        .symbolEffect(.variableColor, options: .repeating, value: animateCards)
+                        .symbolEffect(.variableColor, options: .speed(0.5), value: animateCards)
                 }
             }
             
@@ -268,7 +268,7 @@ struct HomeView: View {
                         Image(systemName: "plus.circle.fill")
                             .font(.system(size: 34))
                             .foregroundColor(AppTheme.Colors.primary)
-                            .symbolEffect(.bounce, options: .repeating.speed(1.5), value: animateCards)
+                            .symbolEffect(.bounce, options: .speed(0.5), value: animateCards)
                     }
                     
                     Text("選擇錄音檔案")
@@ -443,7 +443,7 @@ struct HomeView: View {
                 .padding(.vertical, 30)
             } else {
                 LazyVStack(spacing: 12) {
-                    ForEach(Array(recordingManager.recordings.prefix(5))) { recording in
+                    ForEach(Array(recordingManager.recordings.prefix(5)), id: \.id) { recording in
                         NavigationLink(destination: RecordingDetailView(recording: recording)) {
                             RecordingRowView(recording: recording)
                         }

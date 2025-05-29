@@ -4,7 +4,7 @@ struct HistoryView: View {
     @EnvironmentObject var recordingManager: RecordingManager
     @State private var searchText = ""
     @State private var sortOption: SortOption = .dateDescending
-    @State private var showingLoadingAnimation = true
+    @State private var showingLoadingAnimation = false
     @State private var cachedFilteredRecordings: [Recording] = []
     @State private var lastSearchText = ""
     @State private var lastSortOption: SortOption = .dateDescending
@@ -159,8 +159,7 @@ struct HistoryView: View {
             } else {
                 LazyVStack(spacing: 12) {
                     ForEach(filteredAndSortedRecordings) { recording in
-                        NavigationLink(destination: RecordingDetailView(recording: recording)
-                            .id(recording.id)) {
+                        NavigationLink(destination: RecordingDetailView(recording: recording)) {
                             RecordingRowView(recording: recording)
                                 .transition(.asymmetric(
                                     insertion: .move(edge: .trailing).combined(with: .opacity),
@@ -168,7 +167,6 @@ struct HistoryView: View {
                                 ))
                         }
                         .buttonStyle(PlainButtonStyle())
-                        .id(recording.id) // 加入ID以提升導航性能
                         .contextMenu {
                             Button(action: {
                                 selectedRecording = recording
@@ -187,7 +185,7 @@ struct HistoryView: View {
                         }
                     }
                 }
-                .animation(.spring(response: 0.6, dampingFraction: 0.8), value: filteredAndSortedRecordings.count)
+                .animation(.easeInOut(duration: 0.3), value: filteredAndSortedRecordings.count)
             }
         }
     }
@@ -212,7 +210,7 @@ struct HistoryView: View {
                     .font(.system(size: 30, weight: .light))
                     .foregroundColor(AppTheme.Colors.primary)
                     .scaleEffect(showingLoadingAnimation ? 1.1 : 1.0)
-                    .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: showingLoadingAnimation)
+                    .animation(showingLoadingAnimation ? .easeInOut(duration: 1.5).repeatForever(autoreverses: true) : .default, value: showingLoadingAnimation)
             }
             
             VStack(spacing: 8) {
@@ -243,6 +241,9 @@ struct HistoryView: View {
         .padding(.vertical, 20)
         .onAppear {
             showingLoadingAnimation = true
+        }
+        .onDisappear {
+            showingLoadingAnimation = false
         }
     }
     
