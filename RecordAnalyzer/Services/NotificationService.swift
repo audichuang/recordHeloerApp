@@ -43,11 +43,17 @@ class NotificationService: ObservableObject {
     func requestAuthorization() async {
         do {
             let options: UNAuthorizationOptions = [.alert, .sound, .badge]
-            isAuthorized = try await notificationCenter.requestAuthorization(options: options)
-            print("📱 通知授權狀態: \(isAuthorized ? "已授權" : "未授權")")
+            let center = UNUserNotificationCenter.current()
+            let authorized = try await center.requestAuthorization(options: options)
+            await MainActor.run {
+                self.isAuthorized = authorized
+            }
+            print("📱 通知授權狀態: \(authorized ? "已授權" : "未授權")")
         } catch {
             print("❌ 請求通知授權失敗: \(error.localizedDescription)")
-            isAuthorized = false
+            await MainActor.run {
+                self.isAuthorized = false
+            }
         }
     }
     

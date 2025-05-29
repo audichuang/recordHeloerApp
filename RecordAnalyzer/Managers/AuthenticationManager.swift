@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import AuthenticationServices
 
 // Swift 6.0 升級：使用 @MainActor 確保UI更新安全
 @MainActor
@@ -91,6 +92,49 @@ class AuthenticationManager: ObservableObject {
             currentUser = nil
             isAuthenticated = false
             await dataStore.clearUser()
+        }
+    }
+    
+    // 新增：Apple ID 登入
+    func loginWithApple(
+        userID: String,
+        email: String?,
+        fullName: PersonNameComponents?,
+        identityToken: String,
+        authorizationCode: String
+    ) async {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            // 構建姓名字串
+            var displayName = "Apple User"
+            if let fullName = fullName {
+                let firstName = fullName.givenName ?? ""
+                let lastName = fullName.familyName ?? ""
+                if !firstName.isEmpty || !lastName.isEmpty {
+                    displayName = "\(firstName) \(lastName)".trimmingCharacters(in: .whitespaces)
+                }
+            }
+            
+            // 調用 API 驗證 Apple 登入
+            let user = try await networkService.loginWithApple(
+                userID: userID,
+                email: email,
+                fullName: displayName,
+                identityToken: identityToken,
+                authorizationCode: authorizationCode
+            )
+            
+            self.currentUser = user
+            self.isAuthenticated = true
+            self.isLoading = false
+            
+            // 保存認證狀態
+            await dataStore.saveUser(user)
+        } catch {
+            self.errorMessage = "Apple 登入失敗：\(error.localizedDescription)"
+            self.isLoading = false
         }
     }
     

@@ -10,7 +10,7 @@ target = project.targets.find { |t| t.name == 'RecordAnalyzer' }
 raise "Error: 找不到 RecordAnalyzer 目標" unless target
 
 # 要包含的目錄列表
-source_dirs = ['RecordAnalyzer/Models', 'RecordAnalyzer/Views/Components', 'RecordAnalyzer/Views']
+source_dirs = ['RecordAnalyzer/Models', 'RecordAnalyzer/Views/Components', 'RecordAnalyzer/Views', 'RecordAnalyzer/Managers', 'RecordAnalyzer/Services']
 
 source_dirs.each do |dir|
   Dir.glob(File.join(ROOT, dir, '**', '*.swift')).each do |full_path|

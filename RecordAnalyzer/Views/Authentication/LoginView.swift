@@ -1,7 +1,9 @@
 import SwiftUI
+import AuthenticationServices
 
 struct LoginView: View {
     @EnvironmentObject var authManager: AuthenticationManager
+    @StateObject private var appleAuthManager = AppleAuthenticationManager()
     @State private var email = ""
     @State private var password = ""
     @State private var showingRegister = false
@@ -269,6 +271,80 @@ struct LoginView: View {
                                     .padding(.top, 10)
                                     .id("loginButton")
                                     
+                                    // 分隔線與或字
+                                    HStack {
+                                        Rectangle()
+                                            .fill(AppTheme.Colors.divider)
+                                            .frame(height: 1)
+                                        
+                                        Text("或")
+                                            .foregroundColor(AppTheme.Colors.textSecondary)
+                                            .font(.subheadline)
+                                            .padding(.horizontal, 10)
+                                        
+                                        Rectangle()
+                                            .fill(AppTheme.Colors.divider)
+                                            .frame(height: 1)
+                                    }
+                                    .padding(.vertical, 10)
+                                    
+                                    // Sign in with Apple 按鈕
+                                    Group {
+                                        #if targetEnvironment(simulator)
+                                        // 模擬器測試按鈕
+                                        Button(action: {
+                                            Task {
+                                                // 使用測試數據模擬 Apple 登入
+                                                await authManager.loginWithApple(
+                                                    userID: "simulator.test.user.001",
+                                                    email: "apple.test@example.com",
+                                                    fullName: PersonNameComponents(
+                                                        givenName: "測試",
+                                                        familyName: "用戶"
+                                                    ),
+                                                    identityToken: "simulator.test.token",
+                                                    authorizationCode: "simulator.test.code"
+                                                )
+                                            }
+                                        }) {
+                                            HStack {
+                                                Image(systemName: "applelogo")
+                                                    .font(.system(size: 20))
+                                                Text("Sign in with Apple (模擬器測試)")
+                                                    .font(.system(size: 19, weight: .medium))
+                                            }
+                                            .foregroundColor(.white)
+                                            .frame(maxWidth: .infinity)
+                                            .frame(height: 50)
+                                            .background(Color.black)
+                                            .cornerRadius(AppTheme.CornerRadius.medium)
+                                        }
+                                        .disabled(authManager.isLoading)
+                                        .opacity(authManager.isLoading ? 0.6 : 1.0)
+                                        #else
+                                        // 真實設備使用真正的 Sign in with Apple
+                                        SignInWithAppleButton(.signIn) { request in
+                                            // 配置請求
+                                        } onCompletion: { result in
+                                            switch result {
+                                            case .success(let authorization):
+                                                handleAppleSignInSuccess(authorization)
+                                            case .failure(let error):
+                                                authManager.errorMessage = "Apple 登入失敗: \(error.localizedDescription)"
+                                            }
+                                        }
+                                        .signInWithAppleButtonStyle(.black)
+                                        .frame(height: 50)
+                                        .cornerRadius(AppTheme.CornerRadius.medium)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
+                                                .stroke(AppTheme.Colors.divider, lineWidth: 1)
+                                        )
+                                        .disabled(appleAuthManager.isSigningIn || authManager.isLoading)
+                                        .opacity((appleAuthManager.isSigningIn || authManager.isLoading) ? 0.6 : 1.0)
+                                        #endif
+                                    }
+                                    
                                     // 註冊連結
                                     Button(action: {
                                         showingRegister = true
@@ -373,6 +449,27 @@ struct LoginView: View {
         
         // 收起鍵盤
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+    
+    private func handleAppleSignInSuccess(_ authorization: ASAuthorization) {
+        guard let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential,
+              let identityTokenData = appleIDCredential.identityToken,
+              let identityToken = String(data: identityTokenData, encoding: .utf8),
+              let authCodeData = appleIDCredential.authorizationCode,
+              let authCode = String(data: authCodeData, encoding: .utf8) else {
+            authManager.errorMessage = "無法取得 Apple ID 憑證"
+            return
+        }
+        
+        Task {
+            await authManager.loginWithApple(
+                userID: appleIDCredential.user,
+                email: appleIDCredential.email,
+                fullName: appleIDCredential.fullName,
+                identityToken: identityToken,
+                authorizationCode: authCode
+            )
+        }
     }
 }
 

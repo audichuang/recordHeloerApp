@@ -330,6 +330,69 @@ class NetworkService: ObservableObject {
         clearAuthToken()
     }
     
+    // Apple ID 登入
+    func loginWithApple(
+        userID: String,
+        email: String?,
+        fullName: String,
+        identityToken: String,
+        authorizationCode: String
+    ) async throws -> User {
+        struct AppleLoginRequest: Codable {
+            let userID: String
+            let email: String?
+            let fullName: String
+            let identityToken: String
+            let authorizationCode: String
+            
+            enum CodingKeys: String, CodingKey {
+                case userID = "user_id"
+                case email
+                case fullName = "full_name"
+                case identityToken = "identity_token"
+                case authorizationCode = "authorization_code"
+            }
+        }
+        
+        let request = AppleLoginRequest(
+            userID: userID,
+            email: email,
+            fullName: fullName,
+            identityToken: identityToken,
+            authorizationCode: authorizationCode
+        )
+        
+        let requestData = try JSONEncoder().encode(request)
+        
+        let response: LoginResponse = try await performRequest(
+            endpoint: "/auth/apple",
+            method: .POST,
+            body: requestData,
+            responseType: LoginResponse.self
+        )
+        
+        // 保存訪問令牌和刷新令牌
+        saveAuthToken(response.accessToken)
+        UserDefaults.standard.set(response.refreshToken, forKey: "refresh_token")
+        
+        // 記錄成功登入
+        print("Apple 登入成功: 用戶名 = \(response.user.username)")
+        
+        // 修改用戶實例，添加令牌
+        var mutableUser = response.user
+        mutableUser.accessToken = response.accessToken
+        mutableUser.refreshToken = response.refreshToken
+        
+        // 將完整用戶對象（包含令牌）保存到 UserDefaults
+        if let userData = try? JSONEncoder().encode(mutableUser) {
+            UserDefaults.standard.set(userData, forKey: "savedUser")
+            UserDefaults.standard.synchronize()
+            print("📝 保存 Apple 登入用戶數據（包含令牌）到 UserDefaults")
+        }
+        
+        return mutableUser
+    }
+    
     func getCurrentUser() async throws -> User {
         return try await performRequest(
             endpoint: "/auth/me",

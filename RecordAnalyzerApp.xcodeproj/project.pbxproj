@@ -12,6 +12,9 @@
 		1B5F54DC98F68AE768AAE3BA /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DBE02A9E78EC3149A0A5F85 /* SplashView.swift */; };
 		1FB5A0766BE818E4744998BF /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D59EF6B54EB69C21D9E9FBD2 /* Theme.swift */; };
 		2C83DDC00387710E7EDF471E /* RecordingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F37804AF41E4879F9B5964D /* RecordingDetailView.swift */; };
+		2CC840EC6A242E670F2AFBEB /* RecordingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109590A2D24230F184CD183E /* RecordingManager.swift */; };
+		402163F254DAF5696C958B7B /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFA7D8A44848E1A61A63D4D7 /* NotificationService.swift */; };
+		555734609D1A055C9BAC6F2A /* AuthenticationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2EF63FDE11E30EB66798573 /* AuthenticationManager.swift */; };
 		713A757A0CA06E85620571CD /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D96D560BB58104D674BCF4B5 /* HomeView.swift */; };
 		7180BB74EF8A6642FEA53C81 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4917F2FFCC5056779716A4C9 /* RegisterView.swift */; };
 		760120E652109B122D98D9DA /* CardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75CD83C433828362F72DC83E /* CardView.swift */; };
@@ -21,6 +24,7 @@
 		8A37A18A2DE6EA010045F096 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 8A37A1892DE6EA010045F096 /* MarkdownUI */; };
 		8A816D102DE597ED00F22D75 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A816D0E2DE597ED00F22D75 /* NetworkService.swift */; };
 		8B0DA5A1A2918C964979AA8E /* GradientButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 929B54721F25EF59754FAF3C /* GradientButton.swift */; };
+		92D77D1DD071EC10E6EF0A7F /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EFA669C8B57165CA9730155 /* NetworkService.swift */; };
 		B3C61FA1F04A9F8E71119E21 /* RecordingRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DB34D703FEA8CDC7B01DECC /* RecordingRowView.swift */; };
 		B5889F84F084656CF67135B1 /* AnalysisHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26E9F1DEDC7E3C7C2A569F18 /* AnalysisHistoryView.swift */; };
 		CE01 /* RecordAnalyzerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE02 /* RecordAnalyzerApp.swift */; };
@@ -39,17 +43,21 @@
 		CE27 /* RecordingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE28 /* RecordingDetailView.swift */; };
 		CE54 /* MarkdownText.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE55 /* MarkdownText.swift */; };
 		CE87FBC0D60B1C750AFF828D /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76B8E7C233FEF26D62EB3613 /* ProfileView.swift */; };
+		DFABF3A27927D69B6EF33F86 /* AppleAuthenticationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081F05A28F7B7EC985E98A7A /* AppleAuthenticationManager.swift */; };
 		E2FC998E3F7E3BDE490C74EF /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ACC62807824E03FB8A23B71 /* HistoryView.swift */; };
 		E57B56EF44EC871A2877C1BC /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FE90B4735CBA06CF7BAA3F7 /* LoginView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		081F05A28F7B7EC985E98A7A /* AppleAuthenticationManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AppleAuthenticationManager.swift; path = RecordAnalyzer/Managers/AppleAuthenticationManager.swift; sourceTree = "<group>"; };
+		109590A2D24230F184CD183E /* RecordingManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RecordingManager.swift; path = RecordAnalyzer/Managers/RecordingManager.swift; sourceTree = "<group>"; };
 		1C4837839227014DA8EB16C1 /* RecordingModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RecordingModel.swift; path = RecordAnalyzer/Models/RecordingModel.swift; sourceTree = "<group>"; };
 		1DB34D703FEA8CDC7B01DECC /* RecordingRowView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RecordingRowView.swift; path = RecordAnalyzer/Views/Components/RecordingRowView.swift; sourceTree = "<group>"; };
 		26E9F1DEDC7E3C7C2A569F18 /* AnalysisHistoryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AnalysisHistoryView.swift; path = RecordAnalyzer/Views/Recording/AnalysisHistoryView.swift; sourceTree = "<group>"; };
 		3F37804AF41E4879F9B5964D /* RecordingDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RecordingDetailView.swift; path = RecordAnalyzer/Views/Recording/RecordingDetailView.swift; sourceTree = "<group>"; };
 		4917F2FFCC5056779716A4C9 /* RegisterView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RegisterView.swift; path = RecordAnalyzer/Views/Authentication/RegisterView.swift; sourceTree = "<group>"; };
 		4DBE02A9E78EC3149A0A5F85 /* SplashView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SplashView.swift; path = RecordAnalyzer/Views/SplashView.swift; sourceTree = "<group>"; };
+		4EFA669C8B57165CA9730155 /* NetworkService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NetworkService.swift; path = RecordAnalyzer/Services/NetworkService.swift; sourceTree = "<group>"; };
 		6FDE5221AD36AD97C1F1F67B /* RegenerateButton.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RegenerateButton.swift; path = RecordAnalyzer/Views/Components/RegenerateButton.swift; sourceTree = "<group>"; };
 		75CD83C433828362F72DC83E /* CardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CardView.swift; path = RecordAnalyzer/Views/Components/CardView.swift; sourceTree = "<group>"; };
 		76B8E7C233FEF26D62EB3613 /* ProfileView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProfileView.swift; path = RecordAnalyzer/Views/Profile/ProfileView.swift; sourceTree = "<group>"; };
@@ -74,6 +82,8 @@
 		CE28 /* RecordingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingDetailView.swift; sourceTree = "<group>"; };
 		CE29 /* RecordAnalyzer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RecordAnalyzer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CE55 /* MarkdownText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownText.swift; sourceTree = "<group>"; };
+		CFA7D8A44848E1A61A63D4D7 /* NotificationService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotificationService.swift; path = RecordAnalyzer/Services/NotificationService.swift; sourceTree = "<group>"; };
+		D2EF63FDE11E30EB66798573 /* AuthenticationManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AuthenticationManager.swift; path = RecordAnalyzer/Managers/AuthenticationManager.swift; sourceTree = "<group>"; };
 		D59EF6B54EB69C21D9E9FBD2 /* Theme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Theme.swift; path = RecordAnalyzer/Models/Theme.swift; sourceTree = "<group>"; };
 		D96D560BB58104D674BCF4B5 /* HomeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HomeView.swift; path = RecordAnalyzer/Views/Home/HomeView.swift; sourceTree = "<group>"; };
 		DCE1F08525744ABCAE8ACCD7 /* MarkdownText.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MarkdownText.swift; path = RecordAnalyzer/Views/Components/MarkdownText.swift; sourceTree = "<group>"; };
@@ -121,6 +131,11 @@
 				6FDE5221AD36AD97C1F1F67B /* RegenerateButton.swift */,
 				26E9F1DEDC7E3C7C2A569F18 /* AnalysisHistoryView.swift */,
 				4DBE02A9E78EC3149A0A5F85 /* SplashView.swift */,
+				D2EF63FDE11E30EB66798573 /* AuthenticationManager.swift */,
+				109590A2D24230F184CD183E /* RecordingManager.swift */,
+				081F05A28F7B7EC985E98A7A /* AppleAuthenticationManager.swift */,
+				CFA7D8A44848E1A61A63D4D7 /* NotificationService.swift */,
+				4EFA669C8B57165CA9730155 /* NetworkService.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -340,6 +355,11 @@
 				8070BC749AFAA4A14D8BF186 /* RegenerateButton.swift in Sources */,
 				B5889F84F084656CF67135B1 /* AnalysisHistoryView.swift in Sources */,
 				1B5F54DC98F68AE768AAE3BA /* SplashView.swift in Sources */,
+				555734609D1A055C9BAC6F2A /* AuthenticationManager.swift in Sources */,
+				2CC840EC6A242E670F2AFBEB /* RecordingManager.swift in Sources */,
+				DFABF3A27927D69B6EF33F86 /* AppleAuthenticationManager.swift in Sources */,
+				402163F254DAF5696C958B7B /* NotificationService.swift in Sources */,
+				92D77D1DD071EC10E6EF0A7F /* NetworkService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -470,6 +490,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = RecordAnalyzer/RecordAnalyzer.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"RecordAnalyzer/Preview Content\"";
@@ -505,6 +526,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = RecordAnalyzer/RecordAnalyzer.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"RecordAnalyzer/Preview Content\"";
