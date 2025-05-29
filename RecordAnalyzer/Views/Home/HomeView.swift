@@ -42,16 +42,6 @@ struct HomeView: View {
                     uploadContent
                 }
                 
-                // 上傳進度
-                if recordingManager.isUploading {
-                    uploadProgressSection
-                        .smallShadow()
-                        .transition(.asymmetric(
-                            insertion: .scale(scale: 0.9).combined(with: .opacity),
-                            removal: .scale(scale: 0.8).combined(with: .opacity)
-                        ))
-                }
-                
                 // 錯誤信息
                 if let error = recordingManager.error {
                     errorBanner(message: error)
@@ -265,19 +255,53 @@ struct HomeView: View {
                             .fill(AppTheme.Colors.primary.opacity(0.1))
                             .frame(width: 80, height: 80)
                         
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 34))
-                            .foregroundColor(AppTheme.Colors.primary)
-                            .symbolEffect(.bounce, options: .speed(0.5), value: animateCards)
+                        if recordingManager.isUploading {
+                            // 顯示圓形進度指示器
+                            ZStack {
+                                // 背景圓圈 - 使用更深的顏色
+                                Circle()
+                                    .stroke(lineWidth: 10)
+                                    .foregroundColor(Color.gray.opacity(0.2))
+                                    .frame(width: 80, height: 80)
+                                
+                                // 進度圓圈 - 使用更鮮豔的顏色
+                                Circle()
+                                    .trim(from: 0.0, to: recordingManager.uploadProgress)
+                                    .stroke(style: StrokeStyle(lineWidth: 10, lineCap: .round, lineJoin: .round))
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [AppTheme.Colors.primary, AppTheme.Colors.secondary]),
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 80, height: 80)
+                                    .rotationEffect(Angle(degrees: -90))
+                                    .animation(.easeInOut(duration: 0.3), value: recordingManager.uploadProgress)
+                                    .shadow(color: AppTheme.Colors.primary.opacity(0.3), radius: 4, x: 0, y: 0)
+                                
+                                // 百分比文字 - 使用白色確保清晰可見
+                                Text("\(Int(recordingManager.uploadProgress * 100))%")
+                                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white)
+                                    .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                            }
+                        } else {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 34))
+                                .foregroundColor(AppTheme.Colors.primary)
+                                .symbolEffect(.bounce, options: .speed(0.5), value: animateCards)
+                        }
                     }
                     
-                    Text("選擇錄音檔案")
+                    Text(recordingManager.isUploading ? "正在處理錄音..." : "選擇錄音檔案")
                         .font(.headline)
-                        .foregroundColor(AppTheme.Colors.primary)
+                        .fontWeight(.semibold)
+                        .foregroundColor(recordingManager.isUploading ? AppTheme.Colors.textPrimary : AppTheme.Colors.primary)
                     
-                    Text("支援 MP3, M4A, WAV 等格式")
+                    Text(recordingManager.isUploading ? "請稍候，正在分析您的錄音" : "支援 MP3, M4A, WAV 等格式")
                         .font(.caption)
-                        .foregroundColor(AppTheme.Colors.textSecondary)
+                        .foregroundColor(recordingManager.isUploading ? AppTheme.Colors.textPrimary.opacity(0.8) : AppTheme.Colors.textSecondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 30)
@@ -294,6 +318,7 @@ struct HomeView: View {
                 )
             }
             .buttonStyle(PlainButtonStyle())
+            .disabled(recordingManager.isUploading)
             
             // 分割線
             HStack {
@@ -341,30 +366,6 @@ struct HomeView: View {
         }
     }
     
-    private var uploadProgressSection: some View {
-        VStack(spacing: 12) {
-            Text("正在處理錄音...")
-                .font(.headline)
-                .fontWeight(.semibold)
-            
-            ProgressView(value: recordingManager.uploadProgress)
-                .progressViewStyle(
-                    GradientProgressStyle(
-                        gradient: Gradient(colors: AppTheme.Gradients.warning)
-                    )
-                )
-                .frame(height: 8)
-            
-            Text("\(Int(recordingManager.uploadProgress * 100))% 完成")
-                .font(.caption)
-                .foregroundColor(AppTheme.Colors.textSecondary)
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.large)
-                .fill(AppTheme.Colors.card)
-        )
-    }
     
     private func errorBanner(message: String) -> some View {
         VStack(spacing: 12) {
