@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFoundation
 
 struct RecordingDetailView: View {
     let recording: Recording
@@ -16,9 +17,19 @@ struct RecordingDetailView: View {
     @State private var showRegenerateSuccess = false
     @State private var regenerateSuccessMessage = ""
     @State private var showTimelineTranscript = false
+    @State private var showSRTView = false
+    @State private var parsedSRTSegments: [SRTSegment] = []
+    @StateObject private var audioPlayer = AudioPlayerManager()
+    @State private var isInitialized = false
     @EnvironmentObject var recordingManager: RecordingManager
     
     private let networkService = NetworkService.shared
+    
+    // 懸浮播放器顯示條件
+    private var shouldShowFloatingPlayer: Bool {
+        // 只要在字幕模式且有SRT片段就顯示
+        showSRTView && !parsedSRTSegments.isEmpty
+    }
     
     init(recording: Recording) {
         self.recording = recording
@@ -26,23 +37,40 @@ struct RecordingDetailView: View {
     }
     
     var body: some View {
-        mainContent
-            .background(AppTheme.Colors.background)
-            .navigationTitle(detailRecording.title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    shareButton
-                }
+        ZStack(alignment: .bottom) {
+            mainContent
+                .background(AppTheme.Colors.background)
+                .padding(.bottom, shouldShowFloatingPlayer ? 56 : 0) // 調整底部空間以配合新的播放器高度
+            
+            // 簡化的懸浮播放器
+            if shouldShowFloatingPlayer {
+                SimplFloatingPlayer(
+                    audioPlayer: audioPlayer,
+                    recordingTitle: detailRecording.title,
+                    segments: parsedSRTSegments,
+                    onSegmentTap: { segment in
+                        audioPlayer.seekToSegment(segment)
+                    }
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .animation(.easeInOut(duration: 0.3), value: shouldShowFloatingPlayer)
             }
-            .onAppear(perform: handleOnAppear)
-            .onDisappear(perform: handleOnDisappear)
-            .onChange(of: recordingManager.recordings) { oldRecordings, newRecordings in
-                handleRecordingsChange(oldRecordings: oldRecordings, newRecordings: newRecordings)
+        }
+        .navigationTitle(detailRecording.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                shareButton
             }
-            .refreshable {
-                await loadRecordingDetail()
-            }
+        }
+        .onAppear(perform: handleOnAppear)
+        .onDisappear(perform: handleOnDisappear)
+        .onChange(of: recordingManager.recordings) { oldRecordings, newRecordings in
+            handleRecordingsChange(oldRecordings: oldRecordings, newRecordings: newRecordings)
+        }
+        .refreshable {
+            await loadRecordingDetail()
+        }
             .sheet(isPresented: $showingHistory) {
                 AnalysisHistoryView(recordingId: detailRecording.id.uuidString, analysisType: historyType)
             }
@@ -89,17 +117,127 @@ struct RecordingDetailView: View {
                 } else {
                     summaryCard
                 }
+                
             }
             .padding()
         }
     }
     
+    private func parseSRTContent() {
+        guard let srtContent = detailRecording.srtContent, !srtContent.isEmpty else { 
+            print("⚠️ 沒有 SRT 內容可解析")
+            return 
+        }
+        
+        // 記憶體優化：在背景執行解析，限制片段數量
+        Task.detached(priority: .userInitiated) {
+            let segments = await Self.parseSRTSegments(from: srtContent)
+            
+            await MainActor.run {
+                // 如果片段過多，只取前500個避免卡頓
+                if segments.count > 500 {
+                    self.parsedSRTSegments = Array(segments.prefix(500))
+                    print("⚠️ SRT 片段過多(\(segments.count))，只顯示前500個以確保性能")
+                } else {
+                    self.parsedSRTSegments = segments
+                }
+                print("📝 解析 SRT 完成，顯示 \(self.parsedSRTSegments.count) 個片段")
+                
+                // 不再自動切換到 SRT 視圖，讓用戶手動選擇
+                // if !self.parsedSRTSegments.isEmpty && self.detailRecording.hasTimestamps {
+                //     self.showSRTView = true
+                // }
+            }
+        }
+    }
+    
+    // 靜態方法，記憶體效率更高
+    private static func parseSRTSegments(from srtContent: String) async -> [SRTSegment] {
+        var segments: [SRTSegment] = []
+        segments.reserveCapacity(500) // 預分配容量，提升性能
+        
+        let lines = srtContent.components(separatedBy: .newlines)
+        var i = 0
+        var segmentId = 1
+        
+        while i < lines.count {
+            // Skip empty lines
+            let trimmedLine = lines[i].trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmedLine.isEmpty {
+                i += 1
+                continue
+            }
+            
+            // Parse segment number (optional, we'll use our own ID)
+            if let _ = Int(trimmedLine) {
+                i += 1
+            }
+            
+            // Parse time range
+            if i < lines.count && lines[i].contains("-->") {
+                let times = lines[i].components(separatedBy: "-->")
+                if times.count == 2 {
+                    let startTime = Self.parseSRTTime(times[0].trimmingCharacters(in: .whitespaces))
+                    let endTime = Self.parseSRTTime(times[1].trimmingCharacters(in: .whitespaces))
+                    i += 1
+                    
+                    // Parse text lines (優化字符串處理)
+                    var textParts: [String] = []
+                    while i < lines.count && !lines[i].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        textParts.append(lines[i])
+                        i += 1
+                    }
+                    
+                    let text = textParts.joined(separator: " ")
+                    if !text.isEmpty {
+                        segments.append(SRTSegment(
+                            id: segmentId,
+                            startTime: startTime,
+                            endTime: endTime,
+                            text: text,
+                            speaker: nil
+                        ))
+                        segmentId += 1
+                    }
+                }
+            }
+            i += 1
+        }
+        
+        return segments
+    }
+    
+    private static func parseSRTTime(_ timeString: String) -> Double {
+        let parts = timeString.replacingOccurrences(of: ",", with: ".").components(separatedBy: ":")
+        guard parts.count >= 3 else { return 0 }
+        
+        let hours = Double(parts[0]) ?? 0
+        let minutes = Double(parts[1]) ?? 0
+        let seconds = Double(parts[2]) ?? 0
+        
+        return hours * 3600 + minutes * 60 + seconds
+    }
+    
     private func handleOnAppear() {
+        // 只在第一次 onAppear 時執行初始化
+        guard !isInitialized else { return }
+        isInitialized = true
+        
         // 暫停自動刷新以避免數據更新造成視圖跳出
         recordingManager.stopMonitoringForProcessing()
         
-        // 立即顯示現有內容，不阻塞UI
-        syncWithRecordingManager()
+        // 解析 SRT 內容
+        if detailRecording.srtContent != nil {
+            parseSRTContent()
+        }
+        
+        // 載入音頻（如果有 SRT）
+        if detailRecording.hasTimestamps {
+            Task {
+                print("🎵 開始載入音頻 (handleOnAppear)")
+                await loadAudioForPlayback()
+            }
+        }
         
         // 檢查是否需要載入完整詳細內容
         let needsDetailLoading = checkIfNeedsDetailLoading()
@@ -118,6 +256,8 @@ struct RecordingDetailView: View {
     private func handleOnDisappear() {
         // 恢復自動刷新
         recordingManager.startMonitoringForProcessing()
+        // 清理音頻播放器資源
+        audioPlayer.cleanup()
     }
     
     private func handleRecordingsChange(oldRecordings: [Recording], newRecordings: [Recording]) {
@@ -149,24 +289,27 @@ struct RecordingDetailView: View {
     
     /// 與 RecordingManager 中的數據同步
     private func syncWithRecordingManager() {
-        if let updatedRecording = recordingManager.recordings.first(where: { $0.id == detailRecording.id }) {
-            let oldStatus = detailRecording.status
-            
-            // 避免不必要的更新
-            guard updatedRecording != detailRecording else { return }
-            
-            // 直接使用 RecordingManager 中的最新數據
-            detailRecording = updatedRecording
-            
-            // 如果狀態從處理中變為已完成，且內容為空，則立即顯示載入狀態並重新載入
-            if oldStatus != "completed" && updatedRecording.status == "completed" {
-                let hasTranscription = !(updatedRecording.transcription?.isEmpty ?? true) && updatedRecording.transcription != "可用"
-                let hasSummary = !(updatedRecording.summary?.isEmpty ?? true) && updatedRecording.summary != "可用"
+        // 只在初始化時同步一次，避免後續更新導致視圖跳動
+        if detailRecording.transcription == nil && detailRecording.summary == nil {
+            if let updatedRecording = recordingManager.recordings.first(where: { $0.id == detailRecording.id }) {
+                let oldStatus = detailRecording.status
                 
-                if !hasTranscription || !hasSummary {
-                    isLoadingDetail = true
-                    Task {
-                        await loadRecordingDetail()
+                // 避免不必要的更新
+                guard updatedRecording != detailRecording else { return }
+                
+                // 直接使用 RecordingManager 中的最新數據
+                detailRecording = updatedRecording
+                
+                // 如果狀態從處理中變為已完成，且內容為空，則立即顯示載入狀態並重新載入
+                if oldStatus != "completed" && updatedRecording.status == "completed" {
+                    let hasTranscription = !(updatedRecording.transcription?.isEmpty ?? true) && updatedRecording.transcription != "可用"
+                    let hasSummary = !(updatedRecording.summary?.isEmpty ?? true) && updatedRecording.summary != "可用"
+                    
+                    if !hasTranscription || !hasSummary {
+                        isLoadingDetail = true
+                        Task {
+                            await loadRecordingDetail()
+                        }
                     }
                 }
             }
@@ -187,8 +330,21 @@ struct RecordingDetailView: View {
                 self.detailRecording = fullRecording
                 self.isLoadingDetail = false
                 
-                // 同步更新的詳細資料到 RecordingManager
-                self.updateRecordingInManager(fullRecording)
+                // 不更新 RecordingManager，避免觸發視圖跳動
+                // self.updateRecordingInManager(fullRecording)
+                
+                // 重新解析 SRT
+                self.parseSRTContent()
+                
+                // 載入音頻（如果有 SRT 且尚未載入）
+                if fullRecording.hasTimestamps {
+                    if self.audioPlayer.duration == 0 {
+                        Task {
+                            print("🎵 開始載入音頻 (loadRecordingDetail)")
+                            await self.loadAudioForPlayback()
+                        }
+                    }
+                }
             }
         } catch {
             await MainActor.run {
@@ -211,12 +367,27 @@ struct RecordingDetailView: View {
                 // 平滑更新內容，不顯示載入狀態
                 self.detailRecording = fullRecording
                 
-                // 同步更新的詳細資料到 RecordingManager
-                self.updateRecordingInManager(fullRecording)
+                // 不更新 RecordingManager，避免觸發視圖跳動
+                // self.updateRecordingInManager(fullRecording)
                 
                 print("📱 背景載入完成，內容已更新")
                 print("📝 逐字稿內容: \(fullRecording.transcription?.prefix(100) ?? "nil")")
                 print("📝 摘要內容: \(fullRecording.summary?.prefix(100) ?? "nil")")
+                print("📝 SRT 內容: \(fullRecording.srtContent?.prefix(100) ?? "nil")")
+                print("📝 有時間戳: \(fullRecording.hasTimestamps)")
+                
+                // 重新解析 SRT
+                self.parseSRTContent()
+                
+                // 載入音頻（如果有 SRT 且尚未載入）
+                if fullRecording.hasTimestamps {
+                    if self.audioPlayer.duration == 0 {
+                        Task {
+                            print("🎵 開始載入音頻 (loadRecordingDetailInBackground)")
+                            await self.loadAudioForPlayback()
+                        }
+                    }
+                }
             }
         } catch {
             await MainActor.run {
@@ -228,8 +399,32 @@ struct RecordingDetailView: View {
     
     /// 將更新的錄音詳情同步到 RecordingManager
     private func updateRecordingInManager(_ updatedRecording: Recording) {
+        // 移除直接更新 recordingManager，避免觸發 onChange 導致視圖跳動
+        // 只在真正需要時才更新（例如狀態變化）
         if let index = recordingManager.recordings.firstIndex(where: { $0.id == updatedRecording.id }) {
-            recordingManager.recordings[index] = updatedRecording
+            let existingRecording = recordingManager.recordings[index]
+            // 只在狀態有實質變化時才更新
+            if existingRecording.status != updatedRecording.status {
+                recordingManager.recordings[index] = updatedRecording
+            }
+        }
+    }
+    
+    /// 載入音頻用於播放
+    private func loadAudioForPlayback() async {
+        do {
+            // 下載音頻數據
+            let audioData = try await networkService.downloadRecording(id: detailRecording.id.uuidString)
+            
+            // 使用音頻播放器載入
+            await audioPlayer.loadAudioFromData(audioData)
+            
+            print("🎵 音頻載入完成，時長: \(audioPlayer.duration)")
+        } catch {
+            print("❌ 載入音頻失敗: \(error)")
+            await MainActor.run {
+                self.loadError = "無法載入音頻: \(error.localizedDescription)"
+            }
         }
     }
     
@@ -486,6 +681,22 @@ struct RecordingDetailView: View {
                         .tint(AppTheme.Colors.primary)
                     }
                     
+                    // SRT 切換按鈕（只在有 SRT 時顯示）
+                    if detailRecording.hasTimestamps && !parsedSRTSegments.isEmpty {
+                        Button(action: {
+                            // 簡化切換，移除動畫避免卡頓
+                            showSRTView.toggle()
+                        }) {
+                            Label(showSRTView ? "純文字" : "字幕模式", 
+                                  systemImage: showSRTView ? "text.alignleft" : "captions.bubble")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(AppTheme.Colors.primary)
+                        .disabled(parsedSRTSegments.count > 500) // 超過500個片段時禁用
+                    }
+                    
                     Spacer()
                 }
                 
@@ -501,7 +712,21 @@ struct RecordingDetailView: View {
                     } else {
                         // 優化的文本顯示
                         let _ = print("🎯 顯示逐字稿，長度: \(transcription.count)")
-                        if showTimelineTranscript, let timeline = detailRecording.timelineTranscript {
+                        let _ = print("📱 showSRTView: \(showSRTView), SRT片段數: \(parsedSRTSegments.count)")
+                        let _ = print("🎵 音頻時長: \(audioPlayer.duration), 是否正在播放: \(audioPlayer.isPlaying)")
+                        let _ = print("🎮 懸浮播放器應顯示: \(shouldShowFloatingPlayer)")
+                        
+                        if showSRTView && !parsedSRTSegments.isEmpty {
+                            // 顯示 SRT 字幕視圖（性能優化版）
+                            // 使用優化的 SRT 視圖，防止卡頓
+                            SRTTranscriptView(
+                                segments: parsedSRTSegments,
+                                audioPlayer: audioPlayer,
+                                onSegmentTap: { segment in
+                                    audioPlayer.seekToSegment(segment)
+                                }
+                            )
+                        } else if showTimelineTranscript, let timeline = detailRecording.timelineTranscript {
                             ContentDisplayView(content: timeline, type: .transcription)
                         } else {
                             ContentDisplayView(content: transcription, type: .transcription)
@@ -672,6 +897,100 @@ struct RecordingDetailView: View {
                 icon: "arrow.down.circle",
                 gradient: AppTheme.Gradients.warning
             )
+        }
+    }
+    
+    // MARK: - Audio Player Card (Optimized)
+    private var audioPlayerCard: some View {
+        AnimatedCardView(
+            title: "音頻播放器",
+            icon: "play.circle.fill",
+            gradient: AppTheme.Gradients.info,
+            delay: 0.5
+        ) {
+            VStack(spacing: 16) {
+                // 調試信息
+                if audioPlayer.duration <= 0 {
+                    HStack {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(AppTheme.Colors.warning)
+                        Text("時長: \(audioPlayer.duration)s, 載入中: \(audioPlayer.isLoading)")
+                            .font(.caption)
+                            .foregroundColor(AppTheme.Colors.textSecondary)
+                    }
+                }
+                
+                // 簡化的播放控制
+                HStack(spacing: 20) {
+                    // 播放/暫停按鈕
+                    Button(action: {
+                        audioPlayer.togglePlayPause()
+                    }) {
+                        Circle()
+                            .fill(AppTheme.Colors.primary)
+                            .frame(width: 50, height: 50)
+                            .overlay(
+                                Image(systemName: audioPlayer.isPlaying ? "pause.fill" : "play.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(.white)
+                            )
+                    }
+                    .disabled(audioPlayer.isLoading || audioPlayer.duration <= 0)
+                    
+                    // 時間和進度
+                    VStack(alignment: .leading, spacing: 6) {
+                        // 時間顯示
+                        HStack {
+                            Text(audioPlayer.formattedCurrentTime)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundColor(AppTheme.Colors.textPrimary)
+                            
+                            Spacer()
+                            
+                            Text(audioPlayer.formattedDuration)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundColor(AppTheme.Colors.textSecondary)
+                        }
+                        
+                        // 簡化的進度條
+                        if audioPlayer.duration > 0 {
+                            ProgressView(value: audioPlayer.progress)
+                                .progressViewStyle(LinearProgressViewStyle(tint: AppTheme.Colors.primary))
+                                .frame(height: 6)
+                        } else {
+                            Rectangle()
+                                .fill(AppTheme.Colors.cardHighlight)
+                                .frame(height: 6)
+                                .clipShape(RoundedRectangle(cornerRadius: 3))
+                        }
+                    }
+                }
+                
+                // 狀態信息
+                if audioPlayer.isLoading {
+                    HStack {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: AppTheme.Colors.primary))
+                            .scaleEffect(0.7)
+                        Text("載入音頻中...")
+                            .font(.caption)
+                            .foregroundColor(AppTheme.Colors.textSecondary)
+                    }
+                } else if let error = audioPlayer.error {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(AppTheme.Colors.error)
+                            .font(.caption)
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(AppTheme.Colors.error)
+                    }
+                } else if audioPlayer.duration <= 0 {
+                    Text("無法獲取音頻時長")
+                        .font(.caption)
+                        .foregroundColor(AppTheme.Colors.warning)
+                }
+            }
         }
     }
 }
@@ -1512,34 +1831,618 @@ struct SkeletonTextView: View {
     }
 }
 
-#Preview {
-    NavigationView {
-        RecordingDetailView(recording: Recording(
-            title: "會議記錄 - 項目進度討論",
-            originalFilename: "meeting_20241201.m4a",
-            format: "m4a",
-            mimeType: "audio/m4a",
-            duration: 1245.0,
-            createdAt: Date(),
-            transcription: "今天的會議主要討論了項目的進度情況。我們已經完成了第一階段的開發工作，目前正在進行測試階段。預計下週可以完成所有測試工作，然後進入第二階段的開發。在討論過程中，我們也識別了一些潛在的風險和挑戰，需要在接下來的工作中特別注意。團隊成員都表示對目前的進度感到滿意，並且對後續的工作安排有清晰的了解。",
-            summary: """
-            # 會議摘要
-            ## 主要討論點
-            - 項目進度：第一階段開發完成
-            - 測試階段：正在進行中
-            - 時程規劃：下週完成測試
+// MARK: - Lightweight SRT View (Ultra Performance)
+struct SRTTranscriptView: View {
+    let segments: [SRTSegment]
+    @ObservedObject var audioPlayer: AudioPlayerManager
+    let onSegmentTap: (SRTSegment) -> Void
+    
+    @State private var displaySegments: [SRTSegment] = []
+    @State private var currentPage = 0
+    @State private var hasMorePages = true
+    @State private var currentSegmentId: Int?
+    @State private var isLoading = false
+    @State private var scrollProxy: ScrollViewProxy?
+    @State private var hapticFeedback = UIImpactFeedbackGenerator(style: .light)
+    
+    private let pageSize = 30  // 每頁顯示30個片段
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // 優雅的頂部控制欄
+            HStack(spacing: 16) {
+                // 播放狀態指示
+                HStack(spacing: 10) {
+                    // 動態播放指示器
+                    ZStack {
+                        Circle()
+                            .fill(AppTheme.Colors.primary.opacity(0.15))
+                            .frame(width: 36, height: 36)
+                        
+                        Image(systemName: audioPlayer.isPlaying ? "waveform.circle.fill" : "play.circle.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(AppTheme.Colors.primary)
+                            .symbolRenderingMode(.hierarchical)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(audioPlayer.isPlaying ? "正在播放" : "已暫停")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(AppTheme.Colors.textPrimary)
+                        
+                        if let currentSegment = getCurrentSegment() {
+                            Text(currentSegment.formattedStartTime)
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundColor(AppTheme.Colors.textSecondary)
+                        }
+                    }
+                }
+                
+                Spacer()
+                
+                // 快速跳轉按鈕
+                if let currentSegment = getCurrentSegment() {
+                    Button(action: {
+                        if let proxy = scrollProxy {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                proxy.scrollTo(currentSegment.id, anchor: .center)
+                            }
+                        }
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "location.fill")
+                                .font(.system(size: 12))
+                            Text("跳至目前")
+                                .font(.system(size: 12, weight: .medium))
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(AppTheme.Colors.primary.opacity(0.1))
+                        )
+                        .foregroundColor(AppTheme.Colors.primary)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        AppTheme.Colors.card,
+                        AppTheme.Colors.background.opacity(0.95)
+                    ]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
             
-            ## 風險識別
-            1. 潛在技術挑戰
-            2. 資源分配問題
-            3. 時程壓力
+            Divider()
+                .background(AppTheme.Colors.divider.opacity(0.5))
             
-            ### 團隊反饋
-            團隊成員對**目前的進度**感到滿意，並且對後續的工作安排有`清晰的了解`。
-            """,
-            fileURL: nil,
-            fileSize: 2048000,
-            status: "completed"
-        ))
+            // 美化的字幕列表
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing: 0, pinnedViews: []) {
+                        ForEach(displaySegments, id: \.id) { segment in
+                            Group {
+                                EnhancedSRTRow(
+                                    segment: segment,
+                                    isActive: isSegmentActive(segment),
+                                    audioPlayer: audioPlayer,
+                                    onTap: {
+                                        hapticFeedback.impactOccurred()
+                                        onSegmentTap(segment)
+                                    }
+                                )
+                                .id(segment.id)
+                                .onAppear {
+                                    // 當顯示到倒數第5個項目時，自動載入下一頁
+                                    if segment.id == displaySegments.dropLast(4).last?.id {
+                                        autoLoadNextPage()
+                                    }
+                                }
+                                
+                                // 分隔線
+                                if segment.id != displaySegments.last?.id {
+                                    Rectangle()
+                                        .fill(AppTheme.Colors.divider.opacity(0.2))
+                                        .frame(height: 0.5)
+                                        .padding(.leading, 76)
+                                }
+                            }
+                        }
+                        
+                        // 載入指示器
+                        if hasMorePages {
+                            VStack(spacing: 12) {
+                                if isLoading {
+                                    HStack(spacing: 8) {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                            .progressViewStyle(CircularProgressViewStyle(tint: AppTheme.Colors.primary))
+                                        Text("載入更多字幕...")
+                                            .font(.system(size: 13))
+                                            .foregroundColor(AppTheme.Colors.textSecondary)
+                                    }
+                                } else {
+                                    Text("還有 \(segments.count - displaySegments.count) 條字幕")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(AppTheme.Colors.textTertiary)
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 20)
+                            .onAppear {
+                                autoLoadNextPage()
+                            }
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+                .scrollDismissesKeyboard(.immediately)
+                .background(AppTheme.Colors.background)
+                .onAppear {
+                    scrollProxy = proxy
+                }
+            }
+        }
+        .background(AppTheme.Colors.background)
+        .onAppear {
+            initializeView()
+            hapticFeedback.prepare()
+        }
+        .onChange(of: audioPlayer.currentTime) { _, newTime in
+            updateCurrentSegment(at: newTime)
+        }
+    }
+    
+    private func initializeView() {
+        let initialSegments = Array(segments.prefix(pageSize))
+        displaySegments = initialSegments
+        currentPage = 0
+        hasMorePages = segments.count > pageSize
+        print("📱 SRT視圖初始化: 顯示 \(initialSegments.count)/\(segments.count) 個片段")
+    }
+    
+    private func loadNextPage() {
+        let startIndex = (currentPage + 1) * pageSize
+        let endIndex = min(startIndex + pageSize, segments.count)
+        
+        guard startIndex < segments.count else {
+            hasMorePages = false
+            return
+        }
+        
+        let nextBatch = Array(segments[startIndex..<endIndex])
+        displaySegments.append(contentsOf: nextBatch)
+        currentPage += 1
+        hasMorePages = endIndex < segments.count
+        
+        print("📱 載入下一頁: 第\(currentPage)頁，新增 \(nextBatch.count) 個片段")
+    }
+    
+    private func autoLoadNextPage() {
+        // 防止重複載入
+        guard hasMorePages && !isLoading else { return }
+        
+        isLoading = true
+        
+        // 添加短暫延遲，模擬載入效果並防止過於頻繁的載入
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.loadNextPage()
+            self.isLoading = false
+        }
+    }
+    
+    private func getCurrentSegment() -> SRTSegment? {
+        return segments.first { segment in
+            audioPlayer.currentTime >= segment.startTime && audioPlayer.currentTime < segment.endTime
+        }
+    }
+    
+    private func isSegmentActive(_ segment: SRTSegment) -> Bool {
+        audioPlayer.currentTime >= segment.startTime && audioPlayer.currentTime < segment.endTime
+    }
+    
+    private func updateCurrentSegment(at time: TimeInterval) {
+        if let currentSegment = getCurrentSegment() {
+            if currentSegment.id != currentSegmentId {
+                currentSegmentId = currentSegment.id
+                
+                // 確保當前片段在顯示列表中
+                if !displaySegments.contains(where: { $0.id == currentSegment.id }) {
+                    // 找到片段位置並載入到該頁
+                    if let index = segments.firstIndex(where: { $0.id == currentSegment.id }) {
+                        let targetPage = index / pageSize
+                        loadToPage(targetPage)
+                    }
+                }
+                
+                // 自動滾動到當前播放的字幕（如果正在播放）
+                // 使用延遲以避免頻繁滾動
+                if audioPlayer.isPlaying {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        withAnimation(.easeInOut(duration: 0.5)) {
+                            scrollToSegment(currentSegment)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    private func scrollToSegment(_ segment: SRTSegment) {
+        scrollProxy?.scrollTo(segment.id, anchor: .center)
+    }
+    
+    private func loadToPage(_ targetPage: Int) {
+        let startIndex = 0
+        let endIndex = min((targetPage + 1) * pageSize, segments.count)
+        
+        guard endIndex > displaySegments.count else { return }
+        
+        displaySegments = Array(segments[startIndex..<endIndex])
+        currentPage = targetPage
+        hasMorePages = endIndex < segments.count
     }
 }
+
+// MARK: - Enhanced SRT Row (Beautiful Design)
+struct EnhancedSRTRow: View {
+    let segment: SRTSegment
+    let isActive: Bool
+    @ObservedObject var audioPlayer: AudioPlayerManager
+    let onTap: () -> Void
+    
+    @State private var isPressed = false
+    
+    var body: some View {
+        Button(action: {
+            isPressed = true
+            onTap()
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                isPressed = false
+            }
+        }) {
+            HStack(alignment: .center, spacing: 0) {
+                // 左側時間戳 - 簡化版
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(segment.formattedStartTime)
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundColor(isActive ? AppTheme.Colors.primary : AppTheme.Colors.textSecondary)
+                    
+                    if isActive {
+                        // 簡化的進度指示
+                        Circle()
+                            .fill(AppTheme.Colors.primary)
+                            .frame(width: 6, height: 6)
+                    }
+                }
+                .frame(width: 60)
+                .padding(.vertical, 16)
+                .padding(.leading, 8)
+                
+                // 內容區域 - 簡化版
+                VStack(alignment: .leading, spacing: 4) {
+                    // 字幕文字
+                    Text(segment.text)
+                        .font(.system(size: isActive ? 16 : 15))
+                        .fontWeight(isActive ? .medium : .regular)
+                        .foregroundColor(isActive ? AppTheme.Colors.textPrimary : AppTheme.Colors.textPrimary.opacity(0.85))
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .multilineTextAlignment(.leading)
+                    
+                    // 簡化的狀態顯示
+                    if isActive {
+                        HStack(spacing: 8) {
+                            Image(systemName: "waveform")
+                                .font(.system(size: 10))
+                                .foregroundColor(AppTheme.Colors.primary)
+                            
+                            Text("正在播放")
+                                .font(.system(size: 11))
+                                .foregroundColor(AppTheme.Colors.primary)
+                        }
+                    }
+                }
+                .padding(.vertical, 16)
+                .padding(.horizontal, 16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                // 右側播放控制 - 簡化版
+                if isActive {
+                    Button(action: {
+                        audioPlayer.togglePlayPause()
+                    }) {
+                        Image(systemName: audioPlayer.isPlaying ? "pause.fill" : "play.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(AppTheme.Colors.primary)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+            .background(
+                // 簡化的背景
+                HStack(spacing: 0) {
+                    Rectangle()
+                        .fill(isActive ? AppTheme.Colors.primary : Color.clear)
+                        .frame(width: 3)
+                    
+                    Rectangle()
+                        .fill(isActive ? AppTheme.Colors.primary.opacity(0.05) : (isPressed ? AppTheme.Colors.primary.opacity(0.02) : Color.clear))
+                }
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    private func calculateSegmentProgress() -> CGFloat {
+        guard isActive else { return 0 }
+        let segmentDuration = segment.endTime - segment.startTime
+        let elapsed = audioPlayer.currentTime - segment.startTime
+        return max(0, min(1, elapsed / segmentDuration))
+    }
+    
+    private func formatDuration(_ seconds: Double) -> String {
+        let secs = Int(seconds)
+        return String(format: "%d.%d秒", secs, Int((seconds - Double(secs)) * 10))
+    }
+}
+
+// MARK: - Simple Floating Player (Ultra Minimal with Frosted Glass)
+struct SimplFloatingPlayer: View {
+    @ObservedObject var audioPlayer: AudioPlayerManager
+    let recordingTitle: String
+    let segments: [SRTSegment]
+    let onSegmentTap: (SRTSegment) -> Void
+    
+    @State private var isExpanded = false
+    @State private var pulsatingAnimation = false
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // 優雅的進度條
+            if audioPlayer.duration > 0 && !audioPlayer.isLoading {
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        // 背景軌道
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(Color.white.opacity(0.15))
+                            .frame(height: 3)
+                        
+                        // 進度條
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [
+                                        AppTheme.Colors.primary,
+                                        AppTheme.Colors.primary.opacity(0.8)
+                                    ]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: geometry.size.width * audioPlayer.progress, height: 3)
+                            .animation(.linear(duration: 0.1), value: audioPlayer.progress)
+                            .shadow(color: AppTheme.Colors.primary.opacity(0.5), radius: 2, x: 0, y: 0)
+                    }
+                }
+                .frame(height: 3)
+            }
+            
+            ZStack {
+                // 美化的毛玻璃背景
+                VisualEffectBlur(blurStyle: .systemChromeMaterial)
+                    .overlay(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.white.opacity(0.05),
+                                Color.clear
+                            ]),
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                
+                HStack(spacing: 14) {
+                    // 播放控制區（美化版）
+                    if audioPlayer.isLoading {
+                        // 載入動畫
+                        HStack(spacing: 10) {
+                            ZStack {
+                                Circle()
+                                    .fill(AppTheme.Colors.primary.opacity(0.1))
+                                    .frame(width: 40, height: 40)
+                                
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: AppTheme.Colors.primary))
+                                    .scaleEffect(0.7)
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("載入音頻中")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundColor(AppTheme.Colors.textPrimary)
+                                
+                                Text("請稍候...")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(AppTheme.Colors.textSecondary)
+                            }
+                        }
+                    } else {
+                        // 美化的播放按鈕
+                        Button(action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                audioPlayer.togglePlayPause()
+                            }
+                        }) {
+                            ZStack {
+                                // 外圈動態效果
+                                if audioPlayer.isPlaying {
+                                    Circle()
+                                        .stroke(AppTheme.Colors.primary.opacity(0.3), lineWidth: 2)
+                                        .frame(width: 44, height: 44)
+                                        .scaleEffect(pulsatingAnimation ? 1.1 : 1.0)
+                                        .opacity(pulsatingAnimation ? 0 : 1)
+                                        .animation(.easeOut(duration: 1).repeatForever(autoreverses: false), value: pulsatingAnimation)
+                                }
+                                
+                                // 主按鈕
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [
+                                                AppTheme.Colors.primary.opacity(0.9),
+                                                AppTheme.Colors.primary
+                                            ]),
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 40, height: 40)
+                                    .shadow(color: AppTheme.Colors.primary.opacity(0.3), radius: 4, x: 0, y: 2)
+                                
+                                Image(systemName: audioPlayer.isPlaying ? "pause.fill" : "play.fill")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .offset(x: audioPlayer.isPlaying ? 0 : 1) // 播放按鈕稍微偏右
+                            }
+                        }
+                        .disabled(audioPlayer.duration <= 0)
+                        .scaleEffect(audioPlayer.isPlaying ? 1.0 : 0.95)
+                        .onAppear {
+                            pulsatingAnimation = true
+                        }
+                    }
+                    
+                    // 內容區域（美化版）
+                    VStack(alignment: .leading, spacing: 3) {
+                        // 當前播放內容
+                        HStack(spacing: 6) {
+                            if audioPlayer.isPlaying {
+                                Image(systemName: "waveform")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(AppTheme.Colors.primary)
+                                    // 僅在 iOS 17+ 使用 symbolEffect
+                                    .overlay(
+                                        Image(systemName: "waveform")
+                                            .font(.system(size: 10))
+                                            .foregroundColor(AppTheme.Colors.primary.opacity(0.5))
+                                            .scaleEffect(x: 1.0, y: pulsatingAnimation ? 1.2 : 0.8)
+                                            .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: pulsatingAnimation)
+                                    )
+                            }
+                            
+                            if let currentSegment = getCurrentSegment() {
+                                Text(currentSegment.text)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(AppTheme.Colors.textPrimary)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                            } else {
+                                Text(recordingTitle)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(AppTheme.Colors.textPrimary.opacity(0.85))
+                                    .lineLimit(1)
+                            }
+                        }
+                        
+                        // 時間信息（美化版）
+                        if audioPlayer.duration > 0 && !audioPlayer.isLoading {
+                            HStack(spacing: 4) {
+                                Text(audioPlayer.formattedCurrentTime)
+                                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                    .foregroundColor(AppTheme.Colors.primary)
+                                
+                                Text("/")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(AppTheme.Colors.textTertiary)
+                                
+                                Text(audioPlayer.formattedDuration)
+                                    .font(.system(size: 12, design: .monospaced))
+                                    .foregroundColor(AppTheme.Colors.textSecondary)
+                            }
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    // 控制按鈕組（美化版）
+                    if !audioPlayer.isLoading {
+                        HStack(spacing: 12) {
+                            // 後退按鈕
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    audioPlayer.seek(to: max(0, audioPlayer.currentTime - 15))
+                                }
+                            }) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.white.opacity(0.1))
+                                        .frame(width: 32, height: 32)
+                                    
+                                    Image(systemName: "gobackward.15")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(AppTheme.Colors.textPrimary)
+                                }
+                            }
+                            .disabled(audioPlayer.duration <= 0)
+                            
+                            // 前進按鈕
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    audioPlayer.seek(to: min(audioPlayer.duration, audioPlayer.currentTime + 15))
+                                }
+                            }) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.white.opacity(0.1))
+                                        .frame(width: 32, height: 32)
+                                    
+                                    Image(systemName: "goforward.15")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(AppTheme.Colors.textPrimary)
+                                }
+                            }
+                            .disabled(audioPlayer.duration <= 0)
+                        }
+                        .padding(.trailing, 4)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+            }
+            .frame(height: 56)
+            .clipShape(RoundedRectangle(cornerRadius: 0))
+            .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: -4)
+            .shadow(color: AppTheme.Colors.primary.opacity(0.08), radius: 20, x: 0, y: -8)
+        }
+    }
+    
+    private func getCurrentSegment() -> SRTSegment? {
+        return segments.first { segment in
+            audioPlayer.currentTime >= segment.startTime && audioPlayer.currentTime < segment.endTime
+        }
+    }
+}
+
+// MARK: - Visual Effect Blur Helper
+struct VisualEffectBlur: UIViewRepresentable {
+    var blurStyle: UIBlurEffect.Style
+    
+    func makeUIView(context: Context) -> UIVisualEffectView {
+        UIVisualEffectView(effect: UIBlurEffect(style: blurStyle))
+    }
+    
+    func updateUIView(_ uiView: UIVisualEffectView, context: Context) {
+        uiView.effect = UIBlurEffect(style: blurStyle)
+    }
+}
+
+

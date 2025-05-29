@@ -8,6 +8,8 @@ final class AppleAuthenticationManager: NSObject, ObservableObject {
     @Published var error: String?
     
     private var currentNonce: String?
+    private var signInDelegate: AppleSignInDelegate?
+    private var presentationProvider: AppleSignInPresentationProvider?
     
     func signInWithApple(presentationAnchor: ASPresentationAnchor, completion: @escaping (Result<AppleAuthResult, Error>) -> Void) {
         let nonce = randomNonceString()
@@ -19,8 +21,19 @@ final class AppleAuthenticationManager: NSObject, ObservableObject {
         request.nonce = sha256(nonce)
         
         let authorizationController = ASAuthorizationController(authorizationRequests: [request])
-        authorizationController.delegate = AppleSignInDelegate(nonce: nonce, completion: completion)
-        authorizationController.presentationContextProvider = AppleSignInPresentationProvider(anchor: presentationAnchor)
+        
+        // Store delegate and presentation provider to prevent deallocation
+        signInDelegate = AppleSignInDelegate(nonce: nonce, completion: { [weak self] result in
+            completion(result)
+            // Clean up after completion
+            self?.signInDelegate = nil
+            self?.presentationProvider = nil
+            self?.isSigningIn = false
+        })
+        presentationProvider = AppleSignInPresentationProvider(anchor: presentationAnchor)
+        
+        authorizationController.delegate = signInDelegate
+        authorizationController.presentationContextProvider = presentationProvider
         authorizationController.performRequests()
         
         isSigningIn = true

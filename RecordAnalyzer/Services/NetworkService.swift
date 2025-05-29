@@ -148,7 +148,7 @@ class NetworkService: ObservableObject {
     }
     
     // MARK: - Generic API Call
-    private func performRequest<T: Codable>(
+    private func performRequest<T: Decodable>(
         endpoint: String,
         method: HTTPMethod = .GET,
         body: Data? = nil,
@@ -967,6 +967,14 @@ class NetworkService: ObservableObject {
                     let response = try decoder.decode(RecordingResponse.self, from: data)
                     print("✅ 成功解析錄音詳情: \(response.title)")
                     
+                    // 處理 timestamps_data
+                    var timestampsData: TimestampsData? = nil
+                    if let hasTimestamps = response.has_timestamps, hasTimestamps {
+                        // 如果有時間戳，創建空的 TimestampsData
+                        // 實際的時間戳資料會在前端解析 SRT 內容時產生
+                        timestampsData = TimestampsData(words: nil, sentenceSegments: nil)
+                    }
+                    
                     // 轉換為前端的 Recording 格式
                     let recording = Recording(
                         id: UUID(uuidString: response.id) ?? UUID(),
@@ -980,7 +988,13 @@ class NetworkService: ObservableObject {
                         summary: response.summary,
                         fileURL: nil,
                         fileSize: response.file_size,
-                        status: response.status
+                        status: response.status,
+                        timelineTranscript: nil,
+                        hasTimeline: false,
+                        analysisMetadata: nil,
+                        srtContent: response.srt_content,
+                        hasTimestamps: response.has_timestamps ?? false,
+                        timestampsData: timestampsData
                     )
                     
                     return recording
@@ -1060,6 +1074,54 @@ class NetworkService: ObservableObject {
             requiresAuth: true,
             responseType: [AnalysisHistory].self
         )
+    }
+    
+    /// 下載錄音音頻數據
+    func downloadRecording(id: String) async throws -> Data {
+        guard let token = getAuthToken() else {
+            throw NetworkError.unauthorized
+        }
+        
+        guard let url = URL(string: "\(baseURL)/recordings/\(id)/download") else {
+            throw NetworkError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        print("📡 開始下載錄音: \(id)")
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw NetworkError.invalidResponse
+            }
+            
+            print("📡 下載響應狀態碼: \(httpResponse.statusCode)")
+            
+            switch httpResponse.statusCode {
+            case 200...299:
+                print("✅ 成功下載錄音，大小: \(data.count / 1024)KB")
+                return data
+            case 401:
+                throw NetworkError.unauthorized
+            case 404:
+                throw NetworkError.apiError("錄音不存在")
+            case 400...499:
+                throw NetworkError.clientError(httpResponse.statusCode)
+            case 500...599:
+                throw NetworkError.serverError(httpResponse.statusCode)
+            default:
+                throw NetworkError.unknownError
+            }
+            
+        } catch let error as NetworkError {
+            throw error
+        } catch {
+            throw NetworkError.networkError(error.localizedDescription)
+        }
     }
     
     /// 更新錄音標題
@@ -1172,7 +1234,7 @@ struct SystemStatusResponse: Codable {
     let version: String
 }
 
-struct RecordingListResponse: Codable {
+struct RecordingListResponse: Decodable {
     let recordings: [RecordingResponse]
     let total: Int
     let page: Int
@@ -1205,7 +1267,7 @@ struct RecordingSummaryList: Codable {
 }
 
 // 添加後端錄音詳情響應模型
-struct RecordingResponse: Codable {
+struct RecordingResponse: Decodable {
     let id: String
     let title: String
     let original_filename: String
@@ -1217,6 +1279,43 @@ struct RecordingResponse: Codable {
     let created_at: String
     let transcript: String?
     let summary: String?
+    let srt_content: String?
+    let has_timestamps: Bool?
+    let timestamps_data: [String: Any]?
+    
+    enum CodingKeys: String, CodingKey {
+        case id, title, format, status, transcript, summary
+        case original_filename
+        case mime_type
+        case duration
+        case file_size
+        case created_at
+        case srt_content
+        case has_timestamps
+        case timestamps_data
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        original_filename = try container.decode(String.self, forKey: .original_filename)
+        format = try container.decode(String.self, forKey: .format)
+        mime_type = try container.decode(String.self, forKey: .mime_type)
+        duration = try container.decodeIfPresent(TimeInterval.self, forKey: .duration)
+        file_size = try container.decode(Int.self, forKey: .file_size)
+        status = try container.decode(String.self, forKey: .status)
+        created_at = try container.decode(String.self, forKey: .created_at)
+        transcript = try container.decodeIfPresent(String.self, forKey: .transcript)
+        summary = try container.decodeIfPresent(String.self, forKey: .summary)
+        srt_content = try container.decodeIfPresent(String.self, forKey: .srt_content)
+        has_timestamps = try container.decodeIfPresent(Bool.self, forKey: .has_timestamps)
+        
+        // Handle timestamps_data as generic JSON
+        // Since we can't directly decode [String: Any], we'll leave it nil for now
+        // The actual timestamp data will be handled at the frontend level
+        timestamps_data = nil
+    }
 }
 
 // MARK: - Analysis Models

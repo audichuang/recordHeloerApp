@@ -25,6 +25,7 @@
 		8A816D102DE597ED00F22D75 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A816D0E2DE597ED00F22D75 /* NetworkService.swift */; };
 		8B0DA5A1A2918C964979AA8E /* GradientButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 929B54721F25EF59754FAF3C /* GradientButton.swift */; };
 		92D77D1DD071EC10E6EF0A7F /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EFA669C8B57165CA9730155 /* NetworkService.swift */; };
+		ADF9179789570C0F2C4CF814 /* AudioPlayerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73D7E0A9ABD1DC29C16CD77D /* AudioPlayerManager.swift */; };
 		B3C61FA1F04A9F8E71119E21 /* RecordingRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DB34D703FEA8CDC7B01DECC /* RecordingRowView.swift */; };
 		B5889F84F084656CF67135B1 /* AnalysisHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26E9F1DEDC7E3C7C2A569F18 /* AnalysisHistoryView.swift */; };
 		C34F6425D81B7D6F87E805ED /* AccountCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AB0D991D3F58DA03997269B /* AccountCenterView.swift */; };
@@ -61,6 +62,7 @@
 		4DBE02A9E78EC3149A0A5F85 /* SplashView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SplashView.swift; path = RecordAnalyzer/Views/SplashView.swift; sourceTree = "<group>"; };
 		4EFA669C8B57165CA9730155 /* NetworkService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NetworkService.swift; path = RecordAnalyzer/Services/NetworkService.swift; sourceTree = "<group>"; };
 		6FDE5221AD36AD97C1F1F67B /* RegenerateButton.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RegenerateButton.swift; path = RecordAnalyzer/Views/Components/RegenerateButton.swift; sourceTree = "<group>"; };
+		73D7E0A9ABD1DC29C16CD77D /* AudioPlayerManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AudioPlayerManager.swift; path = RecordAnalyzer/Managers/AudioPlayerManager.swift; sourceTree = "<group>"; };
 		75CD83C433828362F72DC83E /* CardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CardView.swift; path = RecordAnalyzer/Views/Components/CardView.swift; sourceTree = "<group>"; };
 		76B8E7C233FEF26D62EB3613 /* ProfileView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProfileView.swift; path = RecordAnalyzer/Views/Profile/ProfileView.swift; sourceTree = "<group>"; };
 		7ACC62807824E03FB8A23B71 /* HistoryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HistoryView.swift; path = RecordAnalyzer/Views/History/HistoryView.swift; sourceTree = "<group>"; };
@@ -139,6 +141,7 @@
 				CFA7D8A44848E1A61A63D4D7 /* NotificationService.swift */,
 				4EFA669C8B57165CA9730155 /* NetworkService.swift */,
 				0AB0D991D3F58DA03997269B /* AccountCenterView.swift */,
+				73D7E0A9ABD1DC29C16CD77D /* AudioPlayerManager.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -364,6 +367,7 @@
 				402163F254DAF5696C958B7B /* NotificationService.swift in Sources */,
 				92D77D1DD071EC10E6EF0A7F /* NetworkService.swift in Sources */,
 				C34F6425D81B7D6F87E805ED /* AccountCenterView.swift in Sources */,
+				ADF9179789570C0F2C4CF814 /* AudioPlayerManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -189,6 +189,9 @@ struct Recording: Identifiable, Codable, Equatable, Sendable {
     let timelineTranscript: String?
     let hasTimeline: Bool
     let analysisMetadata: [String: String]?
+    let srtContent: String?
+    let hasTimestamps: Bool
+    let timestampsData: TimestampsData?
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -206,6 +209,9 @@ struct Recording: Identifiable, Codable, Equatable, Sendable {
         case timelineTranscript = "timeline_transcript"
         case hasTimeline = "has_timeline"
         case analysisMetadata = "analysis_metadata"
+        case srtContent = "srt_content"
+        case hasTimestamps = "has_timestamps"
+        case timestampsData = "timestamps_data"
     }
     
     init(from decoder: Decoder) throws {
@@ -262,9 +268,14 @@ struct Recording: Identifiable, Codable, Equatable, Sendable {
         } else {
             analysisMetadata = nil
         }
+        
+        // 處理 SRT 和時間戳資料
+        srtContent = try container.decodeIfPresent(String.self, forKey: .srtContent)
+        hasTimestamps = try container.decodeIfPresent(Bool.self, forKey: .hasTimestamps) ?? false
+        timestampsData = try container.decodeIfPresent(TimestampsData.self, forKey: .timestampsData)
     }
     
-    init(id: UUID = UUID(), title: String, originalFilename: String, format: String, mimeType: String, duration: TimeInterval? = nil, createdAt: Date, transcription: String? = nil, summary: String? = nil, fileURL: URL? = nil, fileSize: Int? = nil, status: String? = nil, timelineTranscript: String? = nil, hasTimeline: Bool = false, analysisMetadata: [String: String]? = nil) {
+    init(id: UUID = UUID(), title: String, originalFilename: String, format: String, mimeType: String, duration: TimeInterval? = nil, createdAt: Date, transcription: String? = nil, summary: String? = nil, fileURL: URL? = nil, fileSize: Int? = nil, status: String? = nil, timelineTranscript: String? = nil, hasTimeline: Bool = false, analysisMetadata: [String: String]? = nil, srtContent: String? = nil, hasTimestamps: Bool = false, timestampsData: TimestampsData? = nil) {
         self.id = id
         self.title = title
         self.originalFilename = originalFilename
@@ -280,6 +291,9 @@ struct Recording: Identifiable, Codable, Equatable, Sendable {
         self.timelineTranscript = timelineTranscript
         self.hasTimeline = hasTimeline
         self.analysisMetadata = analysisMetadata
+        self.srtContent = srtContent
+        self.hasTimestamps = hasTimestamps
+        self.timestampsData = timestampsData
     }
     
     // 為了向後兼容，保留fileName屬性，但指向originalFilename
@@ -633,6 +647,53 @@ enum AnalysisStatus: String, CaseIterable, Codable {
         case .failed:
             return AppTheme.Colors.error
         }
+    }
+}
+
+// MARK: - Timestamps Data Models
+struct TimestampsData: Codable {
+    let words: [WordTimestamp]?
+    let sentenceSegments: [SRTSegment]?
+    
+    enum CodingKeys: String, CodingKey {
+        case words
+        case sentenceSegments = "sentence_segments"
+    }
+}
+
+struct WordTimestamp: Codable {
+    let text: String
+    let start: Double
+    let end: Double
+    let confidence: Double?
+    let speaker: String?
+}
+
+struct SRTSegment: Identifiable, Codable {
+    let id: Int
+    let startTime: Double
+    let endTime: Double
+    let text: String
+    let speaker: String?
+    
+    // 格式化的時間顯示
+    var formattedStartTime: String {
+        formatTime(startTime)
+    }
+    
+    var formattedEndTime: String {
+        formatTime(endTime)
+    }
+    
+    var formattedTimeRange: String {
+        "\(formattedStartTime) → \(formattedEndTime)"
+    }
+    
+    private func formatTime(_ seconds: Double) -> String {
+        let mins = Int(seconds) / 60
+        let secs = Int(seconds) % 60
+        let millis = Int((seconds - Double(Int(seconds))) * 1000)
+        return String(format: "%02d:%02d.%03d", mins, secs, millis)
     }
 }
 
