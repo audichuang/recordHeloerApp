@@ -4,6 +4,7 @@ struct ProfileView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var recordingManager: RecordingManager
     @State private var showingLogoutAlert = false
+    @State private var showingAccountCenter = false
     
     var body: some View {
         ScrollView {
@@ -59,6 +60,10 @@ struct ProfileView: View {
             }
         } message: {
             Text("您確定要登出嗎？")
+        }
+        .sheet(isPresented: $showingAccountCenter) {
+            AccountCenterView()
+                .environmentObject(authManager)
         }
     }
     
@@ -150,6 +155,16 @@ struct ProfileView: View {
     
     private var settingsContent: some View {
         VStack(spacing: 12) {
+            ModernSettingRow(
+                icon: "person.crop.circle.badge.checkmark",
+                title: "會員中心",
+                subtitle: "管理帳號綁定與登入方式",
+                iconColor: AppTheme.Colors.primary,
+                action: { 
+                    showingAccountCenter = true
+                }
+            )
+            
             ModernSettingRow(
                 icon: "bell",
                 title: "通知設定",

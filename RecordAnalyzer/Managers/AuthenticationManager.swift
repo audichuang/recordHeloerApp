@@ -234,6 +234,29 @@ class AuthenticationManager: ObservableObject {
             print("沒有發現保存的認證狀態")
         }
     }
+    
+    // 重新加載用戶資訊
+    func refreshUserInfo() async {
+        guard isAuthenticated else { return }
+        
+        do {
+            let updatedUser = try await networkService.getCurrentUser()
+            
+            // 保留原有的令牌
+            var userWithTokens = updatedUser
+            if let currentUser = self.currentUser {
+                userWithTokens.accessToken = currentUser.accessToken
+                userWithTokens.refreshToken = currentUser.refreshToken
+            }
+            
+            self.currentUser = userWithTokens
+            await dataStore.saveUser(userWithTokens)
+            
+            print("✅ 成功刷新用戶資訊")
+        } catch {
+            print("❌ 刷新用戶資訊失敗: \(error)")
+        }
+    }
 }
 
 // Swift 6.0 新功能：使用 actor 確保數據安全
@@ -303,6 +326,12 @@ struct User: Codable, Identifiable, Equatable {
     var accessToken: String?
     var refreshToken: String?
     
+    // 添加多種登入方式支援
+    let appleId: String?
+    let googleId: String?
+    let fullName: String?
+    let registrationType: String?  // "email", "apple", "google"
+    
     enum CodingKeys: String, CodingKey {
         case id
         case username
@@ -313,6 +342,10 @@ struct User: Codable, Identifiable, Equatable {
         case updatedAt = "updated_at"
         case accessToken = "access_token"
         case refreshToken = "refresh_token"
+        case appleId = "apple_id"
+        case googleId = "google_id"
+        case fullName = "full_name"
+        case registrationType = "registration_type"
     }
     
     static func == (lhs: User, rhs: User) -> Bool {

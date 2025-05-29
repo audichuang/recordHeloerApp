@@ -393,12 +393,94 @@ class NetworkService: ObservableObject {
         return mutableUser
     }
     
+    // 綁定 Apple ID
+    func bindAppleID(
+        userID: String,
+        identityToken: String,
+        authorizationCode: String,
+        email: String?,
+        fullName: PersonNameComponents?
+    ) async -> Bool {
+        struct AppleBindingRequest: Codable {
+            let userID: String
+            let identityToken: String
+            let authorizationCode: String
+            let email: String?
+            let fullName: String?
+            
+            enum CodingKeys: String, CodingKey {
+                case userID = "user_id"
+                case identityToken = "identity_token"
+                case authorizationCode = "authorization_code"
+                case email
+                case fullName = "full_name"
+            }
+        }
+        
+        let fullNameString = [fullName?.givenName, fullName?.familyName]
+            .compactMap { $0 }
+            .joined(separator: " ")
+            .isEmpty ? nil : [fullName?.givenName, fullName?.familyName]
+            .compactMap { $0 }
+            .joined(separator: " ")
+        
+        let request = AppleBindingRequest(
+            userID: userID,
+            identityToken: identityToken,
+            authorizationCode: authorizationCode,
+            email: email,
+            fullName: fullNameString
+        )
+        
+        do {
+            let requestData = try JSONEncoder().encode(request)
+            
+            let _: EmptyResponse = try await performRequest(
+                endpoint: "/users/bind-apple",
+                method: .POST,
+                body: requestData,
+                requiresAuth: true,
+                responseType: EmptyResponse.self
+            )
+            
+            return true
+        } catch {
+            print("❌ 綁定 Apple ID 失敗: \(error)")
+            return false
+        }
+    }
+    
+    // 解除綁定 Apple ID
+    func unbindAppleID() async -> Bool {
+        do {
+            let _: EmptyResponse = try await performRequest(
+                endpoint: "/users/unbind-apple",
+                method: .DELETE,
+                requiresAuth: true,
+                responseType: EmptyResponse.self
+            )
+            
+            return true
+        } catch {
+            print("❌ 解除綁定 Apple ID 失敗: \(error)")
+            return false
+        }
+    }
+    
     func getCurrentUser() async throws -> User {
-        return try await performRequest(
+        print("📡 正在獲取當前用戶信息...")
+        let user = try await performRequest(
             endpoint: "/auth/me",
             requiresAuth: true,
             responseType: User.self
         )
+        print("✅ 獲取用戶信息成功:")
+        print("   - ID: \(user.id)")
+        print("   - Username: \(user.username)")
+        print("   - Email: \(user.email)")
+        print("   - Apple ID: \(user.appleId ?? "nil")")
+        print("   - Registration Type: \(user.registrationType ?? "nil")")
+        return user
     }
     
     // MARK: - Recordings APIs

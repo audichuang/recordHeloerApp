@@ -27,6 +27,7 @@
 		92D77D1DD071EC10E6EF0A7F /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EFA669C8B57165CA9730155 /* NetworkService.swift */; };
 		B3C61FA1F04A9F8E71119E21 /* RecordingRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DB34D703FEA8CDC7B01DECC /* RecordingRowView.swift */; };
 		B5889F84F084656CF67135B1 /* AnalysisHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26E9F1DEDC7E3C7C2A569F18 /* AnalysisHistoryView.swift */; };
+		C34F6425D81B7D6F87E805ED /* AccountCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AB0D991D3F58DA03997269B /* AccountCenterView.swift */; };
 		CE01 /* RecordAnalyzerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE02 /* RecordAnalyzerApp.swift */; };
 		CE03 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE04 /* ContentView.swift */; };
 		CE05 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CE06 /* Assets.xcassets */; };
@@ -50,6 +51,7 @@
 
 /* Begin PBXFileReference section */
 		081F05A28F7B7EC985E98A7A /* AppleAuthenticationManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AppleAuthenticationManager.swift; path = RecordAnalyzer/Managers/AppleAuthenticationManager.swift; sourceTree = "<group>"; };
+		0AB0D991D3F58DA03997269B /* AccountCenterView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AccountCenterView.swift; path = RecordAnalyzer/Views/Profile/AccountCenterView.swift; sourceTree = "<group>"; };
 		109590A2D24230F184CD183E /* RecordingManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RecordingManager.swift; path = RecordAnalyzer/Managers/RecordingManager.swift; sourceTree = "<group>"; };
 		1C4837839227014DA8EB16C1 /* RecordingModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RecordingModel.swift; path = RecordAnalyzer/Models/RecordingModel.swift; sourceTree = "<group>"; };
 		1DB34D703FEA8CDC7B01DECC /* RecordingRowView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RecordingRowView.swift; path = RecordAnalyzer/Views/Components/RecordingRowView.swift; sourceTree = "<group>"; };
@@ -136,6 +138,7 @@
 				081F05A28F7B7EC985E98A7A /* AppleAuthenticationManager.swift */,
 				CFA7D8A44848E1A61A63D4D7 /* NotificationService.swift */,
 				4EFA669C8B57165CA9730155 /* NetworkService.swift */,
+				0AB0D991D3F58DA03997269B /* AccountCenterView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -360,6 +363,7 @@
 				DFABF3A27927D69B6EF33F86 /* AppleAuthenticationManager.swift in Sources */,
 				402163F254DAF5696C958B7B /* NotificationService.swift in Sources */,
 				92D77D1DD071EC10E6EF0A7F /* NetworkService.swift in Sources */,
+				C34F6425D81B7D6F87E805ED /* AccountCenterView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
