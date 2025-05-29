@@ -16,8 +16,7 @@ struct RecordingDetailView: View {
     @State private var showRegenerateAlert = false
     @State private var showRegenerateSuccess = false
     @State private var regenerateSuccessMessage = ""
-    @State private var showTimelineTranscript = false
-    @State private var showSRTView = false
+    @State private var showSRTView = true
     @State private var parsedSRTSegments: [SRTSegment] = []
     @StateObject private var audioPlayer = AudioPlayerManager()
     @State private var isInitialized = false
@@ -27,8 +26,8 @@ struct RecordingDetailView: View {
     
     // 懸浮播放器顯示條件
     private var shouldShowFloatingPlayer: Bool {
-        // 只要在字幕模式且有SRT片段就顯示
-        showSRTView && !parsedSRTSegments.isEmpty
+        // 只要有SRT片段就顯示
+        !parsedSRTSegments.isEmpty
     }
     
     init(recording: Recording) {
@@ -665,37 +664,6 @@ struct RecordingDetailView: View {
                     .buttonStyle(.bordered)
                     .tint(AppTheme.Colors.primary)
                     
-                    // 時間軸切換按鈕（只在有時間軸時顯示）
-                    if detailRecording.hasTimeline {
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                showTimelineTranscript.toggle()
-                            }
-                        }) {
-                            Label(showTimelineTranscript ? "純文字" : "時間軸", 
-                                  systemImage: showTimelineTranscript ? "text.alignleft" : "timeline.selection")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(AppTheme.Colors.primary)
-                    }
-                    
-                    // SRT 切換按鈕（只在有 SRT 時顯示）
-                    if detailRecording.hasTimestamps && !parsedSRTSegments.isEmpty {
-                        Button(action: {
-                            // 簡化切換，移除動畫避免卡頓
-                            showSRTView.toggle()
-                        }) {
-                            Label(showSRTView ? "純文字" : "字幕模式", 
-                                  systemImage: showSRTView ? "text.alignleft" : "captions.bubble")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(AppTheme.Colors.primary)
-                        .disabled(parsedSRTSegments.count > 500) // 超過500個片段時禁用
-                    }
                     
                     Spacer()
                 }
@@ -716,7 +684,7 @@ struct RecordingDetailView: View {
                         let _ = print("🎵 音頻時長: \(audioPlayer.duration), 是否正在播放: \(audioPlayer.isPlaying)")
                         let _ = print("🎮 懸浮播放器應顯示: \(shouldShowFloatingPlayer)")
                         
-                        if showSRTView && !parsedSRTSegments.isEmpty {
+                        if !parsedSRTSegments.isEmpty {
                             // 顯示 SRT 字幕視圖（性能優化版）
                             // 使用優化的 SRT 視圖，防止卡頓
                             SRTTranscriptView(
@@ -726,8 +694,6 @@ struct RecordingDetailView: View {
                                     audioPlayer.seekToSegment(segment)
                                 }
                             )
-                        } else if showTimelineTranscript, let timeline = detailRecording.timelineTranscript {
-                            ContentDisplayView(content: timeline, type: .transcription)
                         } else {
                             ContentDisplayView(content: transcription, type: .transcription)
                         }
