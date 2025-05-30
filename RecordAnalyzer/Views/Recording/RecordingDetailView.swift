@@ -12,6 +12,7 @@ struct RecordingDetailView: View {
     @State private var isRegeneratingSummary = false
     @State private var showingHistory = false
     @State private var historyType: AnalysisType = .transcription
+    @State private var historySheetData: HistorySheetData?
     @State private var regenerateError: String?
     @State private var showRegenerateAlert = false
     @State private var showRegenerateSuccess = false
@@ -70,10 +71,16 @@ struct RecordingDetailView: View {
         .refreshable {
             await loadRecordingDetail()
         }
-            .sheet(isPresented: $showingHistory) {
-                AnalysisHistoryView(recordingId: detailRecording.id.uuidString, analysisType: historyType)
-            }
-            .alert("重新生成失敗", isPresented: $showRegenerateAlert) {
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("AnalysisVersionChanged"))) { notification in
+            handleVersionChanged(notification: notification)
+        }
+        .sheet(item: $historySheetData) { data in
+            AnalysisHistoryView(recordingId: data.recordingId, analysisType: data.analysisType)
+                .onAppear {
+                    print("📋 AnalysisHistoryView 顯示 - analysisType: \(data.analysisType.rawValue)")
+                }
+        }
+        .alert("重新生成失敗", isPresented: $showRegenerateAlert) {
                 Button("確定", role: .cancel) {}
             } message: {
                 if let error = regenerateError {
@@ -312,6 +319,20 @@ struct RecordingDetailView: View {
                     }
                 }
             }
+        }
+    }
+    
+    /// 處理版本切換通知
+    private func handleVersionChanged(notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let recordingId = userInfo["recordingId"] as? String,
+              recordingId == detailRecording.id.uuidString else {
+            return
+        }
+        
+        // 版本已切換，重新載入錄音詳情
+        Task {
+            await loadRecordingDetail()
         }
     }
     
@@ -654,8 +675,11 @@ struct RecordingDetailView: View {
                     
                     // 歷史記錄按鈕
                     Button(action: {
-                        historyType = .transcription
-                        showingHistory = true
+                        print("🔘 點擊逐字稿歷史記錄按鈕")
+                        historySheetData = HistorySheetData(
+                            recordingId: detailRecording.id.uuidString,
+                            analysisType: .transcription
+                        )
                     }) {
                         Label("歷史記錄", systemImage: "clock.arrow.circlepath")
                             .font(.subheadline)
@@ -748,8 +772,11 @@ struct RecordingDetailView: View {
                         
                         // 歷史記錄按鈕
                         Button(action: {
-                            historyType = .summary
-                            showingHistory = true
+                            print("🔘 點擊摘要歷史記錄按鈕")
+                            historySheetData = HistorySheetData(
+                                recordingId: detailRecording.id.uuidString,
+                                analysisType: .summary
+                            )
                         }) {
                             Label("歷史記錄", systemImage: "clock.arrow.circlepath")
                                 .font(.subheadline)
@@ -2409,6 +2436,13 @@ struct VisualEffectBlur: UIViewRepresentable {
     func updateUIView(_ uiView: UIVisualEffectView, context: Context) {
         uiView.effect = UIBlurEffect(style: blurStyle)
     }
+}
+
+// MARK: - History Sheet Data
+struct HistorySheetData: Identifiable {
+    let id = UUID()
+    let recordingId: String
+    let analysisType: AnalysisType
 }
 
 

@@ -14,10 +14,40 @@ struct AnalysisHistoryView: View {
     private let networkService = NetworkService.shared
     
     var body: some View {
-        NavigationView {
-            ZStack {
-                AppTheme.Colors.background
-                    .ignoresSafeArea()
+        ZStack {
+            AppTheme.Colors.background
+                .ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                // 自定義導航欄
+                HStack {
+                    Button("關閉") {
+                        dismiss()
+                    }
+                    .font(.body)
+                    .foregroundColor(AppTheme.Colors.primary)
+                    
+                    Spacer()
+                    
+                    Text("\(analysisType.displayName)歷史記錄")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    
+                    Spacer()
+                    
+                    // 佔位符，保持標題居中
+                    Button("關閉") {
+                        dismiss()
+                    }
+                    .font(.body)
+                    .opacity(0)
+                    .disabled(true)
+                }
+                .padding()
+                .background(AppTheme.Colors.card)
+                
+                Divider()
+                    .background(AppTheme.Colors.divider)
                 
                 if isLoading {
                     ModernLoadingView(
@@ -45,23 +75,20 @@ struct AnalysisHistoryView: View {
                             ForEach(historyItems) { item in
                                 HistoryItemCard(
                                     item: item,
-                                    analysisType: analysisType
-                                ) {
-                                    selectedItem = item
-                                    showDetailSheet = true
-                                }
+                                    analysisType: analysisType,
+                                    onTap: {
+                                        selectedItem = item
+                                        showDetailSheet = true
+                                    },
+                                    onSetCurrent: {
+                                        Task {
+                                            await setAsCurrentVersion(item)
+                                        }
+                                    }
+                                )
                             }
                         }
                         .padding()
-                    }
-                }
-            }
-            .navigationTitle("\(analysisType.displayName)歷史記錄")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("關閉") {
-                        dismiss()
                     }
                 }
             }
@@ -76,7 +103,47 @@ struct AnalysisHistoryView: View {
         }
     }
     
+    // MARK: - Methods
+    private func setAsCurrentVersion(_ item: AnalysisHistory) async {
+        print("🔄 開始設置版本 \(item.version) 為當前版本")
+        
+        await MainActor.run {
+            isLoading = true
+            loadError = nil
+        }
+        
+        do {
+            print("📡 調用 API 設置當前版本: \(item.id.uuidString)")
+            try await networkService.setCurrentAnalysisVersion(historyId: item.id.uuidString)
+            
+            print("✅ API 調用成功，重新加載歷史記錄")
+            // 重新加載歷史記錄
+            await loadHistory()
+            
+            // 發送通知，讓 RecordingDetailView 重新加載數據
+            await MainActor.run {
+                print("📢 發送版本變更通知")
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("AnalysisVersionChanged"),
+                    object: nil,
+                    userInfo: [
+                        "recordingId": item.recordingId.uuidString,
+                        "analysisType": analysisType.rawValue
+                    ]
+                )
+            }
+        } catch {
+            print("❌ 設置當前版本失敗: \(error.localizedDescription)")
+            await MainActor.run {
+                loadError = error.localizedDescription
+                isLoading = false
+            }
+        }
+    }
+    
     private func loadHistory() async {
+        print("🔍 loadHistory 開始 - analysisType: \(analysisType.rawValue)")
+        
         await MainActor.run {
             isLoading = true
             loadError = nil
@@ -91,6 +158,11 @@ struct AnalysisHistoryView: View {
             await MainActor.run {
                 self.historyItems = history.sorted { $0.version > $1.version }
                 self.isLoading = false
+                
+                // 調試：打印每個項目的詳細信息
+                for item in self.historyItems {
+                    print("📋 歷史項目 - 版本: \(item.version), 狀態: \(item.status.rawValue), 當前: \(item.isCurrent)")
+                }
             }
         } catch {
             await MainActor.run {
@@ -106,30 +178,50 @@ struct HistoryItemCard: View {
     let item: AnalysisHistory
     let analysisType: AnalysisType
     let onTap: () -> Void
+    let onSetCurrent: () -> Void
     
     var body: some View {
-        Button(action: onTap) {
-            AnimatedCardView(
-                title: "版本 \(item.version)",
-                icon: item.isCurrent ? "star.fill" : "clock",
-                gradient: item.isCurrent ? 
-                    (analysisType == .transcription ? AppTheme.Gradients.primary : AppTheme.Gradients.success) :
-                    [AppTheme.Colors.cardHighlight.opacity(0.3), AppTheme.Colors.cardHighlight],
-                delay: 0.0
-            ) {
-                VStack(alignment: .leading, spacing: 12) {
-                    // 狀態和提供者
-                    HStack {
-                        StatusBadge(status: item.status.rawValue, color: item.status.color)
-                        
-                        Spacer()
-                        
-                        ProviderBadge(provider: item.provider)
-                        
-                        if item.isCurrent {
-                            CurrentBadge()
+        AnimatedCardView(
+            title: "版本 \(item.version)",
+            icon: item.isCurrent ? "star.fill" : "clock",
+            gradient: item.isCurrent ? 
+                (analysisType == .transcription ? AppTheme.Gradients.primary : AppTheme.Gradients.success) :
+                [AppTheme.Colors.cardHighlight.opacity(0.3), AppTheme.Colors.cardHighlight],
+            delay: 0.0
+        ) {
+            VStack(alignment: .leading, spacing: 12) {
+                // 狀態和提供者
+                HStack {
+                    StatusBadge(status: item.status.rawValue, color: item.status.color)
+                    
+                    Spacer()
+                    
+                    ProviderBadge(provider: item.provider)
+                    
+                    if item.isCurrent {
+                        CurrentBadge()
+                    } else if item.status == .completed {
+                        // 只有已完成且不是當前版本的才顯示切換按鈕
+                        Button(action: {
+                            print("🔄 點擊設為當前按鈕 - 版本 \(item.version)")
+                            onSetCurrent()
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                    .font(.caption)
+                                Text("設為當前")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(AppTheme.Colors.primary.opacity(0.2))
+                            .foregroundColor(AppTheme.Colors.primary)
+                            .cornerRadius(AppTheme.CornerRadius.small)
                         }
+                        .buttonStyle(BorderlessButtonStyle()) // 使用 BorderlessButtonStyle 避免按鈕事件被父視圖攔截
                     }
+                }
                     
                     // 詳細資訊
                     HStack(spacing: 20) {
@@ -164,24 +256,26 @@ struct HistoryItemCard: View {
                             .padding(.top, 4)
                     }
                     
-                    // 錯誤訊息
-                    if let error = item.errorMessage, item.status == .failed {
-                        HStack(spacing: 8) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.caption)
-                                .foregroundColor(AppTheme.Colors.error)
-                            
-                            Text(error)
-                                .font(.caption)
-                                .foregroundColor(AppTheme.Colors.error)
-                                .lineLimit(2)
-                        }
-                        .padding(.top, 4)
+                // 錯誤訊息
+                if let error = item.errorMessage, item.status == .failed {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundColor(AppTheme.Colors.error)
+                        
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(AppTheme.Colors.error)
+                            .lineLimit(2)
                     }
+                    .padding(.top, 4)
                 }
             }
         }
-        .buttonStyle(PlainButtonStyle())
+        .onTapGesture {
+            // 只有在點擊卡片的非按鈕區域時才觸發
+            onTap()
+        }
     }
 }
 
@@ -191,6 +285,10 @@ struct HistoryDetailView: View {
     let analysisType: AnalysisType
     
     @Environment(\.dismiss) private var dismiss
+    @State private var showSwitchVersionAlert = false
+    @State private var isSwitchingVersion = false
+    @State private var switchError: String?
+    private let networkService = NetworkService.shared
     
     var body: some View {
         NavigationView {
@@ -273,6 +371,82 @@ struct HistoryDetailView: View {
                         dismiss()
                     }
                 }
+                
+                // 只有當不是當前版本且狀態為已完成時，才顯示切換版本按鈕
+                if !history.isCurrent && history.status == .completed {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: {
+                            showSwitchVersionAlert = true
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                Text("使用此版本")
+                            }
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        }
+                        .disabled(isSwitchingVersion)
+                    }
+                }
+            }
+            .alert("切換版本", isPresented: $showSwitchVersionAlert) {
+                Button("取消", role: .cancel) { }
+                Button("確定", role: .destructive) {
+                    Task {
+                        await switchToThisVersion()
+                    }
+                }
+            } message: {
+                Text("確定要將此版本設為當前使用的\(analysisType.displayName)嗎？")
+            }
+            .overlay {
+                if isSwitchingVersion {
+                    Color.black.opacity(0.5)
+                        .ignoresSafeArea()
+                    
+                    ModernLoadingView(
+                        title: "切換中",
+                        message: "正在切換版本...",
+                        icon: "arrow.triangle.2.circlepath",
+                        gradient: analysisType == .transcription ? AppTheme.Gradients.primary : AppTheme.Gradients.success
+                    )
+                }
+            }
+        }
+    }
+    
+    // MARK: - Methods
+    private func switchToThisVersion() async {
+        await MainActor.run {
+            isSwitchingVersion = true
+            switchError = nil
+        }
+        
+        do {
+            try await networkService.setCurrentAnalysisVersion(historyId: history.id.uuidString)
+            
+            await MainActor.run {
+                isSwitchingVersion = false
+                // 發送通知，讓 RecordingDetailView 重新加載數據
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("AnalysisVersionChanged"),
+                    object: nil,
+                    userInfo: [
+                        "recordingId": history.recordingId.uuidString,
+                        "analysisType": analysisType.rawValue
+                    ]
+                )
+                dismiss()
+            }
+        } catch {
+            await MainActor.run {
+                isSwitchingVersion = false
+                switchError = error.localizedDescription
+                // 顯示錯誤提示
+                showSwitchVersionAlert = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    showSwitchVersionAlert = true
+                }
             }
         }
     }
@@ -295,10 +469,10 @@ struct StatusBadge: View {
     }
     
     private var statusDisplay: String {
-        switch status.uppercased() {
-        case "COMPLETED": return "已完成"
-        case "PROCESSING": return "處理中"
-        case "FAILED": return "失敗"
+        switch status.lowercased() {
+        case "completed": return "已完成"
+        case "processing": return "處理中"
+        case "failed": return "失敗"
         default: return status
         }
     }

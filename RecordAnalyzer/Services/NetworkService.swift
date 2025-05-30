@@ -1064,16 +1064,26 @@ class NetworkService: ObservableObject {
         var endpoint = "/analysis/\(recordingId)/history"
         
         if let type = analysisType {
-            // 轉換為後端 API 期望的大寫格式
-            let typeValue = type == .transcription ? "TRANSCRIPTION" : "SUMMARY"
+            // 轉換為後端 API 期望的小寫格式
+            let typeValue = type == .transcription ? "transcription" : "summary"
             endpoint += "?analysis_type=\(typeValue)"
+            print("📋 獲取歷史記錄 - 類型: \(typeValue), 端點: \(endpoint)")
+        } else {
+            print("📋 獲取所有歷史記錄（未指定類型）")
         }
         
-        return try await performRequest(
+        let histories: [AnalysisHistory] = try await performRequest(
             endpoint: endpoint,
             requiresAuth: true,
             responseType: [AnalysisHistory].self
         )
+        
+        print("📋 獲取到 \(histories.count) 個歷史記錄")
+        for history in histories {
+            print("   - 版本 \(history.version): \(history.analysisType.rawValue), 當前: \(history.isCurrent)")
+        }
+        
+        return histories
     }
     
     /// 下載錄音音頻數據
@@ -1147,6 +1157,37 @@ class NetworkService: ObservableObject {
         )
         
         print("✅ 成功更新錄音標題: \(recordingId) -> \(newTitle)")
+    }
+    
+    /// 切換分析版本為當前版本
+    func setCurrentAnalysisVersion(historyId: String) async throws {
+        struct SetCurrentVersionResponse: Codable {
+            let message: String
+            let historyId: String
+            let recordingId: String
+            let analysisType: String
+            let version: Int
+            
+            enum CodingKeys: String, CodingKey {
+                case message
+                case historyId = "history_id"
+                case recordingId = "recording_id"
+                case analysisType = "analysis_type"
+                case version
+            }
+        }
+        
+        print("🔄 正在切換分析版本: \(historyId)")
+        
+        let _: SetCurrentVersionResponse = try await performRequest(
+            endpoint: "/analysis/history/\(historyId)/set-current",
+            method: .POST,
+            body: nil,
+            requiresAuth: true,
+            responseType: SetCurrentVersionResponse.self
+        )
+        
+        print("✅ 成功切換分析版本為當前版本")
     }
     
     // MARK: - Helper Methods

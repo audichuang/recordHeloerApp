@@ -503,7 +503,20 @@ struct AnalysisHistory: Identifiable, Codable, Equatable {
         self.analysisType = AnalysisType(rawValue: analysisTypeString) ?? .transcription
         
         let statusString = try container.decode(String.self, forKey: .status)
-        self.status = AnalysisStatus(rawValue: statusString) ?? .processing
+        // 將後端的小寫值轉換為前端的大寫值
+        let normalizedStatus: String
+        switch statusString.lowercased() {
+        case "completed":
+            normalizedStatus = "COMPLETED"
+        case "processing":
+            normalizedStatus = "PROCESSING"
+        case "failed":
+            normalizedStatus = "FAILED"
+        default:
+            normalizedStatus = "PROCESSING"
+        }
+        print("🔍 解析狀態: '\(statusString)' -> '\(normalizedStatus)' -> \(AnalysisStatus(rawValue: normalizedStatus)?.rawValue ?? "nil")")
+        self.status = AnalysisStatus(rawValue: normalizedStatus) ?? .processing
         
         self.content = try container.decode(String.self, forKey: .content)
         self.provider = try container.decode(String.self, forKey: .provider)
