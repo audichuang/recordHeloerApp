@@ -62,58 +62,62 @@ struct ContentView: View {
             
             Group {
                 if authManager.isAuthenticated {
-                    NavigationView {
-                        TabView(selection: $selectedTab) {
+                    TabView(selection: $selectedTab) {
+                        NavigationView {
                             HomeView(selectedTab: $selectedTab)
-                                .tabItem {
-                                    Label("首頁", systemImage: "house.fill")
-                                }
-                                .tag(0)
-                            
-                            HistoryView()
-                                .tabItem {
-                                    Label("歷史", systemImage: "clock.fill")
-                                }
-                                .tag(1)
-                            
-                            ProfileView()
-                                .tabItem {
-                                    Label("個人", systemImage: "person.fill")
-                                }
-                                .tag(2)
                         }
-                        .tint(Color(hex: "6366F1"))
-                        .background(Color.clear)
-                        .onAppear {
-                            // 設置TabBar的外觀
-                            let appearance = UITabBarAppearance()
-                            appearance.configureWithOpaqueBackground()
-                            appearance.backgroundColor = UIColor.systemBackground
-                            appearance.shadowColor = UIColor.separator.withAlphaComponent(0.3)
-                            
-                            // 設置選中和未選中的顏色
-                            appearance.stackedLayoutAppearance.selected.iconColor = UIColor(AppTheme.Colors.primary)
-                            appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor(AppTheme.Colors.primary)]
-                            appearance.stackedLayoutAppearance.normal.iconColor = UIColor.systemGray
-                            appearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.systemGray]
-                            
-                            // 內聯布局設定
-                            appearance.inlineLayoutAppearance.selected.iconColor = UIColor(AppTheme.Colors.primary)
-                            appearance.inlineLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor(AppTheme.Colors.primary)]
-                            appearance.inlineLayoutAppearance.normal.iconColor = UIColor.systemGray
-                            appearance.inlineLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.systemGray]
-                            
-                            // 緊凑布局設定
-                            appearance.compactInlineLayoutAppearance.selected.iconColor = UIColor(AppTheme.Colors.primary)
-                            appearance.compactInlineLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor(AppTheme.Colors.primary)]
-                            appearance.compactInlineLayoutAppearance.normal.iconColor = UIColor.systemGray
-                            appearance.compactInlineLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.systemGray]
-                            
-                            // 使用自定義外觀
-                            UITabBar.appearance().standardAppearance = appearance
-                            if #available(iOS 15.0, *) {
-                                UITabBar.appearance().scrollEdgeAppearance = appearance
-                            }
+                        .tabItem {
+                            Label("首頁", systemImage: "house.fill")
+                        }
+                        .tag(0)
+                        
+                        NavigationView {
+                            HistoryView()
+                        }
+                        .tabItem {
+                            Label("歷史", systemImage: "clock.fill")
+                        }
+                        .tag(1)
+                        
+                        NavigationView {
+                            ProfileView()
+                        }
+                        .tabItem {
+                            Label("個人", systemImage: "person.fill")
+                        }
+                        .tag(2)
+                    }
+                    .tint(Color(hex: "6366F1"))
+                    .background(Color.clear)
+                    .onAppear {
+                        // 設置TabBar的外觀
+                        let appearance = UITabBarAppearance()
+                        appearance.configureWithOpaqueBackground()
+                        appearance.backgroundColor = UIColor.systemBackground
+                        appearance.shadowColor = UIColor.separator.withAlphaComponent(0.3)
+                        
+                        // 設置選中和未選中的顏色
+                        appearance.stackedLayoutAppearance.selected.iconColor = UIColor(AppTheme.Colors.primary)
+                        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor(AppTheme.Colors.primary)]
+                        appearance.stackedLayoutAppearance.normal.iconColor = UIColor.systemGray
+                        appearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.systemGray]
+                        
+                        // 內聯布局設定
+                        appearance.inlineLayoutAppearance.selected.iconColor = UIColor(AppTheme.Colors.primary)
+                        appearance.inlineLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor(AppTheme.Colors.primary)]
+                        appearance.inlineLayoutAppearance.normal.iconColor = UIColor.systemGray
+                        appearance.inlineLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.systemGray]
+                        
+                        // 緊凑布局設定
+                        appearance.compactInlineLayoutAppearance.selected.iconColor = UIColor(AppTheme.Colors.primary)
+                        appearance.compactInlineLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor(AppTheme.Colors.primary)]
+                        appearance.compactInlineLayoutAppearance.normal.iconColor = UIColor.systemGray
+                        appearance.compactInlineLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.systemGray]
+                        
+                        // 使用自定義外觀
+                        UITabBar.appearance().standardAppearance = appearance
+                        if #available(iOS 15.0, *) {
+                            UITabBar.appearance().scrollEdgeAppearance = appearance
                         }
                     }
                     .background(Color.clear)

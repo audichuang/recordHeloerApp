@@ -181,15 +181,20 @@ struct HistoryItemCard: View {
     let onSetCurrent: () -> Void
     
     var body: some View {
-        AnimatedCardView(
-            title: "版本 \(item.version)",
-            icon: item.isCurrent ? "star.fill" : "clock",
-            gradient: item.isCurrent ? 
-                (analysisType == .transcription ? AppTheme.Gradients.primary : AppTheme.Gradients.success) :
-                [AppTheme.Colors.cardHighlight.opacity(0.3), AppTheme.Colors.cardHighlight],
-            delay: 0.0
-        ) {
-            VStack(alignment: .leading, spacing: 12) {
+        ModernCard {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
+                HStack {
+                    Image(systemName: item.isCurrent ? "star.fill" : "clock")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(item.isCurrent ? 
+                            (analysisType == .transcription ? AppTheme.Colors.primary : AppTheme.Colors.success) :
+                            AppTheme.Colors.textSecondary)
+                    Text("版本 \(item.version)")
+                        .font(.system(size: 18, weight: .semibold))
+                    Spacer()
+                }
+                
+                VStack(alignment: .leading, spacing: 12) {
                 // 狀態和提供者
                 HStack {
                     StatusBadge(status: item.status.rawValue, color: item.status.color)
@@ -271,6 +276,7 @@ struct HistoryItemCard: View {
                     .padding(.top, 4)
                 }
             }
+            }
         }
         .onTapGesture {
             // 只有在點擊卡片的非按鈕區域時才觸發
@@ -295,13 +301,18 @@ struct HistoryDetailView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     // 基本資訊卡片
-                    AnimatedCardView(
-                        title: "版本資訊",
-                        icon: "info.circle.fill",
-                        gradient: analysisType == .transcription ? AppTheme.Gradients.primary : AppTheme.Gradients.success,
-                        delay: 0.1
-                    ) {
-                        VStack(spacing: 16) {
+                    ModernCard {
+                        VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
+                            HStack {
+                                Image(systemName: "info.circle.fill")
+                                    .font(.system(size: 20, weight: .medium))
+                                    .foregroundColor(analysisType == .transcription ? AppTheme.Colors.primary : AppTheme.Colors.success)
+                                Text("版本資訊")
+                                    .font(.system(size: 18, weight: .semibold))
+                                Spacer()
+                            }
+                            
+                            VStack(spacing: 16) {
                             DetailRow(label: "版本號", value: String(history.version))
                             DetailRow(label: "狀態", value: history.status.displayName)
                             DetailRow(label: "提供者", value: history.provider.capitalized)
@@ -328,35 +339,46 @@ struct HistoryDetailView: View {
                                 .padding(.top, 8)
                             }
                         }
+                        }
                     }
                     
                     // 內容卡片
                     if !history.content.isEmpty && history.status == .completed {
-                        AnimatedCardView(
-                            title: analysisType.displayName + "內容",
-                            icon: analysisType == .transcription ? "text.alignleft" : "list.bullet.clipboard",
-                            gradient: analysisType == .transcription ? AppTheme.Gradients.primary : AppTheme.Gradients.success,
-                            delay: 0.2
-                        ) {
-                            ContentDisplayView(
-                                content: history.content,
-                                type: analysisType == .transcription ? .transcription : .summary
-                            )
+                        ModernCard {
+                            VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
+                                HStack {
+                                    Image(systemName: analysisType == .transcription ? "text.alignleft" : "list.bullet.clipboard")
+                                        .font(.system(size: 20, weight: .medium))
+                                        .foregroundColor(analysisType == .transcription ? AppTheme.Colors.primary : AppTheme.Colors.success)
+                                    Text(analysisType.displayName + "內容")
+                                        .font(.system(size: 18, weight: .semibold))
+                                    Spacer()
+                                }
+                                ContentDisplayView(
+                                    content: history.content,
+                                    type: analysisType == .transcription ? .transcription : .summary
+                                )
+                            }
                         }
                     }
                     
                     // 錯誤資訊卡片
                     if let error = history.errorMessage, history.status == .failed {
-                        AnimatedCardView(
-                            title: "錯誤資訊",
-                            icon: "exclamationmark.triangle.fill",
-                            gradient: [AppTheme.Colors.error, AppTheme.Colors.error.opacity(0.8)],
-                            delay: 0.3
-                        ) {
-                            Text(error)
-                                .font(.body)
-                                .foregroundColor(AppTheme.Colors.textPrimary)
-                                .multilineTextAlignment(.leading)
+                        ModernCard {
+                            VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
+                                HStack {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .font(.system(size: 20, weight: .medium))
+                                        .foregroundColor(AppTheme.Colors.error)
+                                    Text("錯誤資訊")
+                                        .font(.system(size: 18, weight: .semibold))
+                                    Spacer()
+                                }
+                                Text(error)
+                                    .font(.body)
+                                    .foregroundColor(AppTheme.Colors.textPrimary)
+                                    .multilineTextAlignment(.leading)
+                            }
                         }
                     }
                 }

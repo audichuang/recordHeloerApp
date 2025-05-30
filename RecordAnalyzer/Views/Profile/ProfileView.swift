@@ -10,43 +10,63 @@ struct ProfileView: View {
         ScrollView {
             VStack(spacing: 25) {
                 // 用戶資訊卡片
-                AnimatedCardView(
-                    title: "個人資訊",
-                    icon: "person.fill",
-                    gradient: AppTheme.Gradients.primary,
-                    delay: 0.1
-                ) {
-                    userInfoContent
+                ModernCard {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
+                        HStack {
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(AppTheme.Colors.primary)
+                            Text("個人資訊")
+                                .font(.system(size: 18, weight: .semibold))
+                            Spacer()
+                        }
+                        userInfoContent
+                    }
                 }
                 
                 // 統計資訊
-                AnimatedCardView(
-                    title: "使用統計",
-                    icon: "chart.bar.fill",
-                    gradient: AppTheme.Gradients.secondary,
-                    delay: 0.2
-                ) {
-                    statisticsContent
+                ModernCard {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
+                        HStack {
+                            Image(systemName: "chart.bar.fill")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(AppTheme.Colors.secondary)
+                            Text("使用統計")
+                                .font(.system(size: 18, weight: .semibold))
+                            Spacer()
+                        }
+                        statisticsContent
+                    }
                 }
                 
                 // 設定選項
-                AnimatedCardView(
-                    title: "設定",
-                    icon: "gear",
-                    gradient: AppTheme.Gradients.info,
-                    delay: 0.3
-                ) {
-                    settingsContent
+                ModernCard {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
+                        HStack {
+                            Image(systemName: "gear")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(AppTheme.Colors.info)
+                            Text("設定")
+                                .font(.system(size: 18, weight: .semibold))
+                            Spacer()
+                        }
+                        settingsContent
+                    }
                 }
                 
                 // 登出按鈕
-                AnimatedCardView(
-                    title: "帳戶操作",
-                    icon: "power",
-                    gradient: AppTheme.Gradients.error,
-                    delay: 0.4
-                ) {
-                    logoutContent
+                ModernCard {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
+                        HStack {
+                            Image(systemName: "power")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(AppTheme.Colors.error)
+                            Text("帳戶操作")
+                                .font(.system(size: 18, weight: .semibold))
+                            Spacer()
+                        }
+                        logoutContent
+                    }
                 }
             }
             .padding()

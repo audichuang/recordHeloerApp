@@ -100,7 +100,7 @@ struct RegisterView: View {
         }
         .navigationBarHidden(true)
         .onAppear {
-            withAnimation(AppTheme.Animation.standard.delay(0.1)) {
+            withAnimation(AppTheme.Animation.smooth.delay(0.1)) {
                 animateCards = true
             }
         }
@@ -226,13 +226,18 @@ struct RegisterFormCard: View {
     @FocusState.Binding var focusedField: RegisterField?
     
     var body: some View {
-        AnimatedCardView(
-            title: "帳戶資訊",
-            icon: "person.badge.plus",
-            gradient: AppTheme.Gradients.secondary,
-            delay: 0.2
-        ) {
-            VStack(spacing: 20) {
+        ModernCard {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
+                HStack {
+                    Image(systemName: "person.badge.plus")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(AppTheme.Colors.secondary)
+                    Text("帳戶資訊")
+                        .font(.system(size: 18, weight: .semibold))
+                    Spacer()
+                }
+                
+                VStack(spacing: 20) {
                 // 用戶名稱輸入
                 UsernameInputField(
                     username: $username,
@@ -286,6 +291,7 @@ struct RegisterFormCard: View {
                     confirmPassword: confirmPassword
                 )
                 .id("buttons")
+                }
             }
         }
     }
@@ -652,18 +658,24 @@ struct RegisterButtonsRow: View {
 
 struct SecurityTipsCard: View {
     var body: some View {
-        AnimatedCardView(
-            title: "安全提示",
-            icon: "shield.fill",
-            gradient: AppTheme.Gradients.info,
-            delay: 0.3
-        ) {
-            VStack(alignment: .leading, spacing: 10) {
-                SecurityTipRow(text: "密碼至少6個字符")
-                SecurityTipRow(text: "建議包含大小寫字母、數字和特殊符號")
-                SecurityTipRow(text: "使用有效的電子郵件地址以便接收通知")
+        ModernCard {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
+                HStack {
+                    Image(systemName: "shield.fill")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(AppTheme.Colors.info)
+                    Text("安全提示")
+                        .font(.system(size: 18, weight: .semibold))
+                    Spacer()
+                }
+                
+                VStack(alignment: .leading, spacing: 10) {
+                    SecurityTipRow(text: "密碼至少6個字符")
+                    SecurityTipRow(text: "建議包含大小寫字母、數字和特殊符號")
+                    SecurityTipRow(text: "使用有效的電子郵件地址以便接收通知")
+                }
+                .padding(.vertical, 5)
             }
-            .padding(.vertical, 5)
         }
     }
 }

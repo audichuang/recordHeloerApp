@@ -129,6 +129,18 @@ private class AppleSignInDelegate: NSObject, ASAuthorizationControllerDelegate {
                 #else
                 completion(.failure(AppleAuthError.unknownError))
                 #endif
+            case .notInteractive:
+                // 需要互動式登入
+                completion(.failure(AppleAuthError.unknownError))
+            case .matchedExcludedCredential:
+                // 憑證已被排除
+                completion(.failure(AppleAuthError.invalidCredential))
+            case .credentialImport:
+                // 憑證匯入失敗
+                completion(.failure(AppleAuthError.invalidCredential))
+            case .credentialExport:
+                // 憑證匯出失敗
+                completion(.failure(AppleAuthError.invalidCredential))
             @unknown default:
                 completion(.failure(AppleAuthError.unknownError))
             }

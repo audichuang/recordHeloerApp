@@ -99,12 +99,11 @@ struct LoginView: View {
                                 }
                                 .padding(.top, keyboardHeight > 0 ? 30 : 70)
                                 
-                                ShimmeringText(
+                                GradientText(
                                     text: "錄音分析助手",
-                                    fontSize: 30,
-                                    fontWeight: .bold,
-                                    baseColor: AppTheme.Colors.textPrimary
+                                    gradient: AppTheme.Gradients.primary
                                 )
+                                .font(.system(size: 30, weight: .bold))
                                 .offset(y: animateCards ? 0 : 15)
                                 .opacity(animateCards ? 1 : 0)
                                 
@@ -118,13 +117,18 @@ struct LoginView: View {
                             .padding(.bottom, 20)
                             
                             // 登入卡片
-                            AnimatedCardView(
-                                title: "帳戶登入",
-                                icon: "person.fill",
-                                gradient: AppTheme.Gradients.primary,
-                                delay: 0.2
-                            ) {
-                                VStack(spacing: 20) {
+                            ModernCard {
+                                VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
+                                    HStack {
+                                        Image(systemName: "person.fill")
+                                            .font(.system(size: 20, weight: .medium))
+                                            .foregroundColor(AppTheme.Colors.primary)
+                                        Text("帳戶登入")
+                                            .font(.system(size: 18, weight: .semibold))
+                                        Spacer()
+                                    }
+                                    
+                                    VStack(spacing: 20) {
                                     // 電子郵件輸入
                                     VStack(alignment: .leading, spacing: 8) {
                                         Text("電子郵件")
@@ -361,6 +365,7 @@ struct LoginView: View {
                                         .padding(.top, 10)
                                     }
                                 }
+                                }
                             }
                             .padding(.horizontal)
                             
@@ -412,7 +417,7 @@ struct LoginView: View {
             }
         }
         .onAppear {
-            withAnimation(AppTheme.Animation.standard.delay(0.1)) {
+            withAnimation(AppTheme.Animation.smooth.delay(0.1)) {
                 animateCards = true
             }
         }

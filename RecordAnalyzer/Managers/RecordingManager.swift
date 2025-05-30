@@ -314,6 +314,24 @@ class RecordingManager: ObservableObject {
             self.error = "刪除失敗：\(error.localizedDescription)"
         }
     }
+    
+    func updateRecordingTitle(recordingId: UUID, newTitle: String) async -> Bool {
+        do {
+            // TODO: 實現伺服器端的更新標題 API
+            // try await networkService.updateRecordingTitle(id: recordingId, title: newTitle)
+            
+            // 暫時只更新本地數據
+            if let index = recordings.firstIndex(where: { $0.id == recordingId }) {
+                recordings[index].title = newTitle
+                await dataStore.saveRecording(recordings[index])
+                return true
+            }
+            return false
+        } catch {
+            self.error = "更新標題失敗：\(error.localizedDescription)"
+            return false
+        }
+    }
 }
 
 // Swift 6.0 新功能：使用 actor 確保數據安全

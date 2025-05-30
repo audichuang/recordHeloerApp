@@ -1,248 +1,240 @@
 import SwiftUI
 
-struct CardView<Content: View>: View {
-    var title: String? = nil
-    var icon: String? = nil
-    var iconGradient: [Color] = AppTheme.Gradients.primary
-    var gradientBorder: Bool = false
-    var borderGradient: [Color] = [AppTheme.Colors.primary.opacity(0.3), AppTheme.Colors.secondary.opacity(0.1)]
-    var showShadow: Bool = true
-    var showHoverEffect: Bool = true
+// MARK: - 現代極簡卡片組件
+struct ModernCard<Content: View>: View {
+    let content: Content
+    var padding: CGFloat = AppTheme.Spacing.l
     var cornerRadius: CGFloat = AppTheme.CornerRadius.large
-    @ViewBuilder let content: Content
+    var showBorder: Bool = false
     
-    @State private var animateHover = false
-    @State private var animateGlow = false
+    init(
+        padding: CGFloat = AppTheme.Spacing.l,
+        cornerRadius: CGFloat = AppTheme.CornerRadius.large,
+        showBorder: Bool = false,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.padding = padding
+        self.cornerRadius = cornerRadius
+        self.showBorder = showBorder
+        self.content = content()
+    }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.l) {
-            if let title = title {
-                HStack {
-                    if let icon = icon {
-                        ZStack {
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: iconGradient),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 32, height: 32)
-                                .shadow(color: iconGradient[0].opacity(0.5), radius: 5, x: 0, y: 2)
-                            
-                            Image(systemName: icon)
-                                .font(.system(size: 14))
-                                .foregroundColor(.white)
-                                .symbolEffect(.pulse, options: .repeating, value: animateGlow)
-                        }
-                    }
-                    
-                    Text(title)
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [AppTheme.Colors.textPrimary, AppTheme.Colors.textPrimary.opacity(0.8)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                    
-                    Spacer()
-                }
-            }
-            
-            content
-        }
-        .padding(AppTheme.Spacing.l)
-        .background(
-            ZStack {
-                // 基礎層
+        content
+            .padding(padding)
+            .background(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(AppTheme.Colors.card)
-                
-                // 漸變邊框
-                if gradientBorder {
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .stroke(
-                            LinearGradient(
-                                gradient: Gradient(colors: borderGradient),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1.5
-                        )
-                        .opacity(animateHover ? 1 : 0.7)
-                }
-                
-                // 懸停時的高光效果
-                if showHoverEffect && animateHover {
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .fill(
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.white.opacity(0.1), Color.clear]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .blendMode(.overlay)
-                }
-            }
-        )
-        .shadow(
-            color: showShadow ? Color.black.opacity(animateHover ? 0.1 : 0.05) : .clear,
-            radius: animateHover ? 15 : 8,
-            x: 0,
-            y: animateHover ? 8 : 4
-        )
-        .scaleEffect(showHoverEffect && animateHover ? 1.02 : 1.0)
-        .onHover { hovering in
-            if showHoverEffect {
-                withAnimation(AppTheme.Animation.standard) {
-                    animateHover = hovering
-                }
-            }
-        }
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                animateGlow = true
-            }
-        }
+                    .fill(AppTheme.Colors.surface)
+                    .overlay(
+                        showBorder ?
+                        RoundedRectangle(cornerRadius: cornerRadius)
+                            .stroke(AppTheme.Colors.border, lineWidth: 1)
+                        : nil
+                    )
+            )
+            .subtleShadow()
     }
 }
 
-struct ActionCardView: View {
-    var title: String
-    var description: String
-    var icon: String
-    var iconGradient: [Color] = AppTheme.Gradients.primary
-    var actionTitle: String = "執行"
-    var action: () -> Void
+// MARK: - 互動式卡片
+struct InteractiveCard<Content: View>: View {
+    let content: Content
+    let action: () -> Void
     
+    @State private var isPressed = false
     @State private var isHovered = false
     
+    init(
+        action: @escaping () -> Void,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.action = action
+        self.content = content()
+    }
+    
     var body: some View {
-        CardView(gradientBorder: true) {
+        ModernCard {
+            content
+        }
+        .scaleEffect(isPressed ? 0.98 : 1.0)
+        .opacity(isPressed ? 0.9 : 1.0)
+        .animation(AppTheme.Animation.quick, value: isPressed)
+        .onTapGesture {
+            withAnimation(AppTheme.Animation.quick) {
+                isPressed = true
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation(AppTheme.Animation.quick) {
+                    isPressed = false
+                }
+                action()
+            }
+        }
+    }
+}
+
+// MARK: - 狀態卡片（簡化版）
+struct StatusCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        HStack(spacing: AppTheme.Spacing.m) {
+            // 圖標
+            Image(systemName: icon)
+                .font(.system(size: 24, weight: .medium))
+                .foregroundColor(color)
+                .frame(width: 48, height: 48)
+                .background(color.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small))
+            
+            // 內容
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(AppTheme.Colors.textSecondary)
+                
+                Text(value)
+                    .font(.system(size: AppTheme.FontSize.title3, weight: .semibold))
+                    .foregroundColor(AppTheme.Colors.textPrimary)
+            }
+            
+            Spacer()
+        }
+        .padding(AppTheme.Spacing.m)
+        .background(AppTheme.Colors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
+                .stroke(AppTheme.Colors.border, lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - 漸層卡片（極簡版）
+struct GradientCard<Content: View>: View {
+    let gradient: [Color]
+    let content: Content
+    
+    init(
+        gradient: [Color] = AppTheme.Gradients.primary,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.gradient = gradient
+        self.content = content()
+    }
+    
+    var body: some View {
+        content
+            .padding(AppTheme.Spacing.l)
+            .background(
+                LinearGradient(
+                    gradient: Gradient(colors: gradient),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .opacity(0.9)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.large))
+            .softShadow()
+    }
+}
+
+// MARK: - 骨架屏卡片
+struct SkeletonCard: View {
+    @State private var shimmer = false
+    
+    var body: some View {
+        ModernCard {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
-                HStack(spacing: AppTheme.Spacing.m) {
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: iconGradient),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .shadow(color: iconGradient[0].opacity(0.5), radius: 5, x: 0, y: 2)
-                            .frame(width: 48, height: 48)
-                        
-                        Image(systemName: icon)
-                            .font(.system(size: 20))
-                            .foregroundColor(.white)
-                            .symbolEffect(.bounce, options: .speed(1.2), value: isHovered)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(title)
-                            .font(.headline)
-                            .fontWeight(.bold)
-                        
-                        Text(description)
-                            .font(.subheadline)
+                // 標題骨架
+                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small)
+                    .fill(AppTheme.Colors.border)
+                    .frame(height: 20)
+                    .frame(maxWidth: 200)
+                
+                // 內容骨架
+                ForEach(0..<3) { _ in
+                    RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small)
+                        .fill(AppTheme.Colors.border)
+                        .frame(height: 16)
+                }
+            }
+            .overlay(
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.white.opacity(0),
+                        Color.white.opacity(0.3),
+                        Color.white.opacity(0)
+                    ]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .rotationEffect(.degrees(30))
+                .offset(x: shimmer ? 300 : -300)
+                .animation(
+                    Animation.linear(duration: 1.5)
+                        .repeatForever(autoreverses: false),
+                    value: shimmer
+                )
+            )
+            .clipped()
+        }
+        .onAppear {
+            shimmer = true
+        }
+    }
+}
+
+// MARK: - 預覽
+struct CardView_Previews: PreviewProvider {
+    static var previews: some View {
+        ScrollView {
+            VStack(spacing: AppTheme.Spacing.l) {
+                // 基本卡片
+                ModernCard {
+                    Text("基本卡片內容")
+                        .font(.body)
+                }
+                
+                // 互動式卡片
+                InteractiveCard(action: {}) {
+                    HStack {
+                        Text("可點擊卡片")
+                        Spacer()
+                        Image(systemName: "chevron.right")
                             .foregroundColor(AppTheme.Colors.textSecondary)
-                            .lineLimit(2)
                     }
                 }
                 
-                Button(action: action) {
-                    HStack {
-                        Text(actionTitle)
-                            .fontWeight(.medium)
-                        
-                        Spacer()
-                        
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .opacity(isHovered ? 1 : 0.6)
-                            .offset(x: isHovered ? 3 : 0)
-                            .animation(.spring(response: 0.3), value: isHovered)
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
-                            .fill(isHovered ? 
-                                  AppTheme.Colors.cardHighlight.opacity(0.8) : 
-                                  AppTheme.Colors.cardHighlight)
-                    )
-                    .onHover { hovering in
-                        isHovered = hovering
+                // 狀態卡片
+                StatusCard(
+                    title: "總錄音",
+                    value: "42",
+                    icon: "waveform.circle.fill",
+                    color: AppTheme.Colors.primary
+                )
+                
+                // 漸層卡片
+                GradientCard {
+                    VStack(spacing: AppTheme.Spacing.s) {
+                        Image(systemName: "sparkles")
+                            .font(.largeTitle)
+                            .foregroundColor(.white)
+                        Text("漸層卡片")
+                            .font(.headline)
+                            .foregroundColor(.white)
                     }
                 }
-                .foregroundColor(isHovered ? AppTheme.Colors.primary : AppTheme.Colors.textPrimary)
-                .buttonStyle(PlainButtonStyle())
+                
+                // 骨架屏
+                SkeletonCard()
             }
+            .padding()
         }
-    }
-}
-
-struct AnimatedCardView<Content: View>: View {
-    var title: String? = nil
-    var icon: String? = nil
-    var gradient: [Color] = AppTheme.Gradients.primary
-    var delay: Double = 0
-    @ViewBuilder let content: Content
-    
-    @State private var isShowing = false
-    
-    var body: some View {
-        CardView(title: title, icon: icon, iconGradient: gradient, gradientBorder: true) {
-            content
-        }
-        .offset(y: isShowing ? 0 : 30)
-        .opacity(isShowing ? 1 : 0)
-        .onAppear {
-            withAnimation(AppTheme.Animation.standard.delay(delay)) {
-                isShowing = true
-            }
-        }
-        .onDisappear {
-            isShowing = false
-        }
-    }
-}
-
-#Preview {
-    ScrollView {
-        VStack(spacing: 20) {
-            CardView(title: "基本卡片", icon: "star.fill") {
-                Text("這是一個基本卡片視圖")
-                    .font(.subheadline)
-                    .foregroundColor(AppTheme.Colors.textSecondary)
-            }
-            
-            CardView(gradientBorder: true) {
-                Text("這是一個帶有漸變邊框的卡片")
-                    .font(.subheadline)
-                    .foregroundColor(AppTheme.Colors.textSecondary)
-            }
-            
-            AnimatedCardView(title: "動畫卡片", icon: "sparkles", gradient: AppTheme.Gradients.info) {
-                Text("這是一個帶有入場動畫的卡片")
-                    .font(.subheadline)
-                    .foregroundColor(AppTheme.Colors.textSecondary)
-            }
-            
-            ActionCardView(
-                title: "上傳錄音",
-                description: "選擇一個音頻文件上傳並進行分析",
-                icon: "arrow.up.circle.fill",
-                actionTitle: "選擇文件",
-                action: {}
-            )
-        }
-        .padding()
         .background(AppTheme.Colors.background)
     }
-} 
+}

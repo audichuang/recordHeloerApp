@@ -34,6 +34,7 @@ struct RecordingDetailView: View {
     init(recording: Recording) {
         self.recording = recording
         self._detailRecording = State(initialValue: recording)
+        print("🎯 RecordingDetailView 初始化 - 錄音標題: \(recording.title), ID: \(recording.id)")
     }
     
     var body: some View {
@@ -229,33 +230,36 @@ struct RecordingDetailView: View {
         guard !isInitialized else { return }
         isInitialized = true
         
-        // 暫停自動刷新以避免數據更新造成視圖跳出
-        recordingManager.stopMonitoringForProcessing()
-        
-        // 解析 SRT 內容
-        if detailRecording.srtContent != nil {
-            parseSRTContent()
-        }
-        
-        // 載入音頻（如果有 SRT）
-        if detailRecording.hasTimestamps {
-            Task {
-                print("🎵 開始載入音頻 (handleOnAppear)")
-                await loadAudioForPlayback()
+        // 添加延遲以確保視圖完全載入
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            // 暫停自動刷新以避免數據更新造成視圖跳出
+            recordingManager.stopMonitoringForProcessing()
+            
+            // 解析 SRT 內容
+            if detailRecording.srtContent != nil {
+                parseSRTContent()
             }
-        }
-        
-        // 檢查是否需要載入完整詳細內容
-        let needsDetailLoading = checkIfNeedsDetailLoading()
-        
-        if needsDetailLoading {
-            print("📱 DetailView首次載入，在背景中獲取完整內容")
-            // 不設置 isLoadingDetail = true，避免阻塞UI
-            Task {
-                await loadRecordingDetailInBackground()
+            
+            // 載入音頻（如果有 SRT）
+            if detailRecording.hasTimestamps {
+                Task {
+                    print("🎵 開始載入音頻 (handleOnAppear)")
+                    await loadAudioForPlayback()
+                }
             }
-        } else {
-            print("📱 DetailView已有完整內容，無需重新載入")
+            
+            // 檢查是否需要載入完整詳細內容
+            let needsDetailLoading = checkIfNeedsDetailLoading()
+            
+            if needsDetailLoading {
+                print("📱 DetailView首次載入，在背景中獲取完整內容")
+                // 不設置 isLoadingDetail = true，避免阻塞UI
+                Task {
+                    await loadRecordingDetailInBackground()
+                }
+            } else {
+                print("📱 DetailView已有完整內容，無需重新載入")
+            }
         }
     }
     
@@ -633,7 +637,7 @@ struct RecordingDetailView: View {
                 isSelected: selectedTab == 0,
                 gradient: AppTheme.Gradients.primary
             ) {
-                withAnimation(AppTheme.Animation.standard) {
+                withAnimation(AppTheme.Animation.smooth) {
                     selectedTab = 0
                 }
             }
@@ -644,7 +648,7 @@ struct RecordingDetailView: View {
                 isSelected: selectedTab == 1,
                 gradient: AppTheme.Gradients.success
             ) {
-                withAnimation(AppTheme.Animation.standard) {
+                withAnimation(AppTheme.Animation.smooth) {
                     selectedTab = 1
                 }
             }

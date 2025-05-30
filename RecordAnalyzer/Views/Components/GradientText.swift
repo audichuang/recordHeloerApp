@@ -1,133 +1,148 @@
 import SwiftUI
 
+// MARK: - 簡約漸變文字
 struct GradientText: View {
-    var text: String
-    var gradient: [Color]
-    var fontSize: CGFloat = 24
-    var fontWeight: Font.Weight = .bold
-    var animate: Bool = false
+    let text: String
+    let gradient: [Color]
+    let fontSize: CGFloat
+    let fontWeight: Font.Weight
     
-    @State private var animateGradient = false
+    init(
+        text: String,
+        gradient: [Color] = AppTheme.Gradients.primary,
+        fontSize: CGFloat = AppTheme.FontSize.body,
+        fontWeight: Font.Weight = .regular
+    ) {
+        self.text = text
+        self.gradient = gradient
+        self.fontSize = fontSize
+        self.fontWeight = fontWeight
+    }
     
     var body: some View {
         Text(text)
             .font(.system(size: fontSize, weight: fontWeight))
             .foregroundStyle(
                 LinearGradient(
-                    colors: gradient,
-                    startPoint: animate ? (animateGradient ? .topLeading : .bottomTrailing) : .topLeading,
-                    endPoint: animate ? (animateGradient ? .bottomTrailing : .topLeading) : .bottomTrailing
+                    gradient: Gradient(colors: gradient),
+                    startPoint: .leading,
+                    endPoint: .trailing
                 )
             )
-            .onAppear {
-                if animate {
-                    withAnimation(.linear(duration: 3).repeatForever(autoreverses: true)) {
-                        animateGradient.toggle()
-                    }
-                }
-            }
     }
 }
 
-struct AnimatedGradientText: View {
-    var text: String
-    var gradient: [Color] = AppTheme.Gradients.primary
-    var fontSize: CGFloat = 24
-    var fontWeight: Font.Weight = .bold
-    var animationDuration: Double = 3
+// MARK: - 動態文字效果
+struct AnimatedText: View {
+    let text: String
+    let fontSize: CGFloat
+    let fontWeight: Font.Weight
+    let color: Color
     
-    @State private var startPoint: UnitPoint = .topLeading
-    @State private var endPoint: UnitPoint = .bottomTrailing
+    @State private var animationAmount = 0.0
+    
+    init(
+        text: String,
+        fontSize: CGFloat = AppTheme.FontSize.body,
+        fontWeight: Font.Weight = .regular,
+        color: Color = AppTheme.Colors.textPrimary
+    ) {
+        self.text = text
+        self.fontSize = fontSize
+        self.fontWeight = fontWeight
+        self.color = color
+    }
     
     var body: some View {
         Text(text)
             .font(.system(size: fontSize, weight: fontWeight))
-            .foregroundStyle(
-                LinearGradient(
-                    colors: gradient,
-                    startPoint: startPoint,
-                    endPoint: endPoint
-                )
-            )
+            .foregroundColor(color)
+            .scaleEffect(1 + animationAmount * 0.05)
             .onAppear {
-                withAnimation(.easeInOut(duration: animationDuration).repeatForever(autoreverses: true)) {
-                    startPoint = .bottomTrailing
-                    endPoint = .topLeading
+                withAnimation(
+                    Animation.easeInOut(duration: 2)
+                        .repeatForever(autoreverses: true)
+                ) {
+                    animationAmount = 1
                 }
             }
     }
 }
 
-struct ShimmeringText: View {
-    var text: String
-    var fontSize: CGFloat = 24
-    var fontWeight: Font.Weight = .bold
-    var baseColor: Color = AppTheme.Colors.primary
-    var highlightColor: Color = .white
+// MARK: - 打字機效果文字
+struct TypewriterText: View {
+    let text: String
+    let fontSize: CGFloat
+    let fontWeight: Font.Weight
+    let color: Color
+    let typingSpeed: Double
     
-    @State private var isAnimating = false
+    @State private var displayedText = ""
+    @State private var currentIndex = 0
+    
+    init(
+        text: String,
+        fontSize: CGFloat = AppTheme.FontSize.body,
+        fontWeight: Font.Weight = .regular,
+        color: Color = AppTheme.Colors.textPrimary,
+        typingSpeed: Double = 0.05
+    ) {
+        self.text = text
+        self.fontSize = fontSize
+        self.fontWeight = fontWeight
+        self.color = color
+        self.typingSpeed = typingSpeed
+    }
     
     var body: some View {
-        ZStack {
-            Text(text)
-                .font(.system(size: fontSize, weight: fontWeight))
-                .foregroundColor(baseColor)
-            
-            Text(text)
-                .font(.system(size: fontSize, weight: fontWeight))
-                .foregroundColor(highlightColor)
-                .mask(
-                    Capsule()
-                        .fill(
-                            LinearGradient(
-                                gradient: Gradient(stops: [
-                                    .init(color: .clear, location: 0),
-                                    .init(color: .white.opacity(0.8), location: 0.45),
-                                    .init(color: .white, location: 0.5),
-                                    .init(color: .white.opacity(0.8), location: 0.55),
-                                    .init(color: .clear, location: 1)
-                                ]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .rotationEffect(.degrees(70))
-                        .offset(x: isAnimating ? 200 : -200)
-                )
-                .blendMode(.overlay)
-                .onAppear {
-                    withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
-                        isAnimating = true
-                    }
-                }
+        Text(displayedText)
+            .font(.system(size: fontSize, weight: fontWeight))
+            .foregroundColor(color)
+            .onAppear {
+                typeText()
+            }
+    }
+    
+    private func typeText() {
+        Task { @MainActor in
+            for i in 0..<text.count {
+                let index = text.index(text.startIndex, offsetBy: i)
+                displayedText.append(text[index])
+                currentIndex = i + 1
+                try? await Task.sleep(nanoseconds: UInt64(typingSpeed * 1_000_000_000))
+            }
         }
     }
 }
 
-#Preview {
-    VStack(spacing: 30) {
-        GradientText(
-            text: "基本漸變文字",
-            gradient: AppTheme.Gradients.primary
-        )
-        
-        GradientText(
-            text: "動畫漸變文字",
-            gradient: AppTheme.Gradients.info,
-            animate: true
-        )
-        
-        AnimatedGradientText(
-            text: "平滑動畫漸變文字",
-            gradient: AppTheme.Gradients.secondary
-        )
-        
-        ShimmeringText(
-            text: "閃耀文字效果",
-            fontSize: 28,
-            baseColor: AppTheme.Colors.success
-        )
+// MARK: - 預覽
+struct GradientText_Previews: PreviewProvider {
+    static var previews: some View {
+        VStack(spacing: AppTheme.Spacing.xl) {
+            // 漸變文字
+            GradientText(
+                text: "漸變文字效果",
+                gradient: AppTheme.Gradients.primary,
+                fontSize: AppTheme.FontSize.title2,
+                fontWeight: .bold
+            )
+            
+            // 動態文字
+            AnimatedText(
+                text: "動態呼吸效果",
+                fontSize: AppTheme.FontSize.title3,
+                fontWeight: .medium,
+                color: AppTheme.Colors.secondary
+            )
+            
+            // 打字機效果
+            TypewriterText(
+                text: "打字機效果文字展示",
+                fontSize: AppTheme.FontSize.body,
+                typingSpeed: 0.1
+            )
+        }
+        .padding()
+        .background(AppTheme.Colors.background)
     }
-    .padding()
-    .background(AppTheme.Colors.background)
-} 
+}

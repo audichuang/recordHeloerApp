@@ -25,33 +25,48 @@ struct HistoryView: View {
         ScrollView {
             VStack(spacing: 25) {
                 // 搜尋和排序卡片
-                AnimatedCardView(
-                    title: "搜尋與篩選",
-                    icon: "magnifyingglass",
-                    gradient: AppTheme.Gradients.info,
-                    delay: 0.1
-                ) {
-                    searchAndSortContent
+                ModernCard {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
+                        HStack {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(AppTheme.Colors.primary)
+                            Text("搜尋與篩選")
+                                .font(.system(size: 18, weight: .semibold))
+                            Spacer()
+                        }
+                        searchAndSortContent
+                    }
                 }
                 
                 // 統計卡片
-                AnimatedCardView(
-                    title: "統計資訊",
-                    icon: "chart.bar.fill",
-                    gradient: AppTheme.Gradients.secondary,
-                    delay: 0.2
-                ) {
-                    statisticsContent
+                ModernCard {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
+                        HStack {
+                            Image(systemName: "chart.bar.fill")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(AppTheme.Colors.secondary)
+                            Text("統計資訊")
+                                .font(.system(size: 18, weight: .semibold))
+                            Spacer()
+                        }
+                        statisticsContent
+                    }
                 }
                 
                 // 錄音列表卡片
-                AnimatedCardView(
-                    title: "錄音列表 (\(filteredAndSortedRecordings.count))",
-                    icon: "list.bullet",
-                    gradient: AppTheme.Gradients.primary,
-                    delay: 0.3
-                ) {
-                    recordingsListContent
+                ModernCard {
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
+                        HStack {
+                            Image(systemName: "list.bullet")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(AppTheme.Colors.primary)
+                            Text("錄音列表 (\(filteredAndSortedRecordings.count))")
+                                .font(.system(size: 18, weight: .semibold))
+                            Spacer()
+                        }
+                        recordingsListContent
+                    }
                 }
             }
             .padding()
@@ -160,7 +175,7 @@ struct HistoryView: View {
                 LazyVStack(spacing: 12) {
                     ForEach(filteredAndSortedRecordings) { recording in
                         NavigationLink(destination: RecordingDetailView(recording: recording)) {
-                            RecordingRowView(recording: recording)
+                            RecordingNavigableRow(recording: recording)
                                 .transition(.asymmetric(
                                     insertion: .move(edge: .trailing).combined(with: .opacity),
                                     removal: .move(edge: .leading).combined(with: .opacity)
@@ -505,6 +520,113 @@ extension View {
                 .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: false), value: isShimmering)
         )
         .clipped()
+    }
+}
+
+// MARK: - 導航專用的錄音行視圖
+struct RecordingNavigableRow: View {
+    let recording: Recording
+    
+    var body: some View {
+        HStack(spacing: AppTheme.Spacing.m) {
+            // 狀態指示器
+            ZStack {
+                Circle()
+                    .fill(statusColor.opacity(0.1))
+                    .frame(width: 40, height: 40)
+                
+                Image(systemName: statusIcon)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(statusColor)
+            }
+            
+            // 內容
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                Text(recording.title)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(AppTheme.Colors.textPrimary)
+                    .lineLimit(1)
+                
+                HStack(spacing: AppTheme.Spacing.s) {
+                    // 時長
+                    Label(formatDuration(recording.duration ?? 0), systemImage: "clock.fill")
+                        .font(.caption)
+                        .foregroundColor(AppTheme.Colors.textTertiary)
+                    
+                    Text("•")
+                        .foregroundColor(AppTheme.Colors.textTertiary)
+                    
+                    // 日期
+                    Text(formatDate(recording.createdAt))
+                        .font(.caption)
+                        .foregroundColor(AppTheme.Colors.textTertiary)
+                    
+                    // 狀態標籤
+                    if recording.status == "processing" {
+                        Text("處理中")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(AppTheme.Colors.warning)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule()
+                                    .fill(AppTheme.Colors.warning.opacity(0.1))
+                            )
+                    }
+                }
+            }
+            
+            Spacer()
+            
+            // 箭頭
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(AppTheme.Colors.textTertiary)
+                .opacity(0.6)
+        }
+        .padding(.horizontal, AppTheme.Spacing.m)
+        .padding(.vertical, AppTheme.Spacing.s)
+        .contentShape(Rectangle())
+    }
+    
+    // MARK: - 計算屬性
+    private var statusIcon: String {
+        switch recording.status {
+        case "completed":
+            return "checkmark"
+        case "failed":
+            return "exclamationmark"
+        case "processing":
+            return "arrow.triangle.2.circlepath"
+        default:
+            return "circle"
+        }
+    }
+    
+    private var statusColor: Color {
+        switch recording.status {
+        case "completed":
+            return AppTheme.Colors.success
+        case "failed":
+            return AppTheme.Colors.error
+        case "processing":
+            return AppTheme.Colors.warning
+        default:
+            return AppTheme.Colors.textTertiary
+        }
+    }
+    
+    // MARK: - 格式化方法
+    private func formatDuration(_ seconds: Double) -> String {
+        let minutes = Int(seconds) / 60
+        let remainingSeconds = Int(seconds) % 60
+        return String(format: "%d:%02d", minutes, remainingSeconds)
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 }
 
