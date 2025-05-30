@@ -2,6 +2,32 @@ import SwiftUI
 import Foundation
 import UserNotifications
 import Combine
+import UIKit
+
+// MARK: - App Delegate
+class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        return true
+    }
+    
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        Task { @MainActor in
+            NotificationManager.shared.registerDeviceToken(deviceToken)
+        }
+    }
+    
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        print("❌ 註冊遠端通知失敗: \(error)")
+    }
+    
+    func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        // 處理背景推送通知
+        Task {
+            await NotificationManager.shared.handleRemoteNotification(userInfo: userInfo)
+            completionHandler(.newData)
+        }
+    }
+}
 
 @main
 struct RecordAnalyzerApp: App {
@@ -9,6 +35,8 @@ struct RecordAnalyzerApp: App {
     @StateObject private var authManager = AuthenticationManager()
     @StateObject private var recordingManager = RecordingManager()
     @StateObject private var notificationService = NotificationService.shared
+    @StateObject private var notificationManager = NotificationManager.shared
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var incomingFileURL: URL?
     @State private var showingFileImport = false
     @State private var showingSplash = true
@@ -24,6 +52,7 @@ struct RecordAnalyzerApp: App {
                         .environmentObject(authManager)
                         .environmentObject(recordingManager)
                         .environmentObject(notificationService)
+                        .environmentObject(notificationManager)
                         .sheet(isPresented: $showingFileImport) {
                             if let fileURL = incomingFileURL {
                                 FileImportView(fileURL: fileURL) {
@@ -44,6 +73,18 @@ struct RecordAnalyzerApp: App {
                 setupFileImportHandling()
                 setupNotifications()
                 checkAuthenticationStatus()
+                
+                // 設定通知觀察者
+                NotificationCenter.default.addObserver(
+                    forName: Notification.Name("NavigateToRecording"),
+                    object: nil,
+                    queue: .main
+                ) { notification in
+                    if let recordingId = notification.userInfo?["recordingId"] as? String {
+                        // TODO: 導航到特定錄音
+                        print("🔔 收到通知點擊，錄音ID: \(recordingId)")
+                    }
+                }
             }
         }
     }
@@ -52,7 +93,19 @@ struct RecordAnalyzerApp: App {
     
     private func setupNotifications() {
         Task {
-            await notificationService.requestAuthorization()
+            print("🔔 設置通知權限...")
+            
+            // 檢查現有權限狀態
+            await notificationManager.checkAuthorizationStatus()
+            
+            // 如果沒有權限，請求權限
+            if !notificationManager.isAuthorized {
+                await notificationService.requestAuthorization()
+                await notificationManager.requestAuthorization()
+                
+                // 再次檢查權限狀態
+                await notificationManager.checkAuthorizationStatus()
+            }
         }
     }
     

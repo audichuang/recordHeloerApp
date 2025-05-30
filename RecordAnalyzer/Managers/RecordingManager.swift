@@ -17,26 +17,31 @@ class RecordingManager: ObservableObject {
     // Swift 6.0 升級：使用 actor 來處理數據存儲
     private let dataStore = RecordingDataStore()
     
-    // 定時刷新
-    private var refreshTimer: Timer?
-    var shouldAutoRefresh = false
-    private var lastRefreshTime: Date = Date(timeIntervalSince1970: 0)
-    private let minimumRefreshInterval: TimeInterval = 15.0 // 最少15秒間隔
+    // 通知相關
+    private var notificationObserver: NSObjectProtocol?
     
-    // 添加控制方法來暫停/恢復自動刷新
-    func stopMonitoringForProcessing() {
-        refreshTimer?.invalidate()
-        refreshTimer = nil
-    }
-    
-    func startMonitoringForProcessing() {
-        guard shouldAutoRefresh else { return }
-        startAutoRefresh()
+    // 設定通知觀察者
+    func setupNotificationObserver() {
+        notificationObserver = NotificationCenter.default.addObserver(
+            forName: Notification.Name("RecordingProcessingCompleted"),
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let recordingId = notification.userInfo?["recordingId"] as? String,
+                  let status = notification.userInfo?["status"] as? String else {
+                return
+            }
+            
+            Task { @MainActor in
+                await self?.updateRecordingStatus(recordingId: recordingId, status: status)
+            }
+        }
     }
     
     init() {
         recordings = []
         recordingSummaries = []
+        setupNotificationObserver()
         Task {
             // 初始化時加載最近的錄音摘要
             await loadRecentRecordingSummaries(limit: 10)
@@ -44,63 +49,40 @@ class RecordingManager: ObservableObject {
     }
     
     deinit {
-        // Swift 6.0: 在 deinit 中不能直接訪問非 Sendable 屬性
-        // 改為依賴 ARC 自動清理
+        // 通知觀察者會在 ARC 清理時自動移除
     }
     
-    /// 開始自動刷新 - 當有錄音正在處理時
-    private func startAutoRefresh() {
-        // 每30秒檢查一次是否有處理中的錄音
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                await self?.checkAndRefreshIfNeeded()
-            }
-        }
-    }
-    
-    /// 停止自動刷新
-    private func stopAutoRefresh() {
-        refreshTimer?.invalidate()
-        refreshTimer = nil
-        shouldAutoRefresh = false
-    }
-    
-    /// 檢查是否需要刷新（有處理中的錄音時）
-    private func checkAndRefreshIfNeeded() async {
-        print("🔍 檢查是否需要自動刷新...")
+    /// 更新錄音狀態（由推送通知觸發）
+    func updateRecordingStatus(recordingId: String, status: String) async {
+        guard let uuid = UUID(uuidString: recordingId) else { return }
         
-        // 防抖動：檢查距離上次刷新是否足夠長時間
-        let timeSinceLastRefresh = Date().timeIntervalSince(lastRefreshTime)
-        if timeSinceLastRefresh < minimumRefreshInterval {
-            print("⏸️ 距離上次刷新時間太短 (\(String(format: "%.1f", timeSinceLastRefresh))秒)，跳過刷新")
-            return
-        }
-        
-        print("📋 當前錄音數量: \(recordings.count)")
-        
-        // 檢查是否有處理中的錄音
-        let processingRecordings = recordings.filter { recording in
-            if let status = recording.status {
-                let isProcessing = ["uploading", "processing"].contains(status.lowercased())
-                if isProcessing {
-                    print("📊 發現處理中的錄音: \(recording.title) - 狀態: \(status)")
+        // 更新本地列表中的狀態
+        if let index = recordings.firstIndex(where: { $0.id == uuid }) {
+            recordings[index].status = status
+            
+            // 如果狀態是完成，重新加載詳細信息
+            if status.lowercased() == "completed" {
+                do {
+                    let detailedRecording = try await networkService.getRecording(id: uuid)
+                    recordings[index] = detailedRecording
+                } catch {
+                    print("❌ 無法加載錄音詳情: \(error)")
                 }
-                return isProcessing
             }
-            return false
         }
         
-        print("⚙️ 處理中的錄音數量: \(processingRecordings.count)")
-        
-        if !processingRecordings.isEmpty {
-            print("🔄 檢測到 \(processingRecordings.count) 個處理中的錄音，開始自動刷新...")
-            lastRefreshTime = Date()
-            await loadRecordingsSummary()
-        } else {
-            print("✅ 沒有處理中的錄音，停止自動刷新")
-            stopAutoRefresh()
+        // 也更新摘要列表
+        if let index = recordingSummaries.firstIndex(where: { $0.id == uuid }) {
+            var summary = recordingSummaries[index]
+            summary.status = status
+            if status.lowercased() == "completed" {
+                summary.hasTranscript = true
+                summary.hasSummary = true
+            }
+            recordingSummaries[index] = summary
         }
     }
+    
     
     
     func uploadRecording(fileURL: URL, title: String) async -> Recording? {
@@ -163,13 +145,7 @@ class RecordingManager: ObservableObject {
             recordings.insert(newRecording, at: 0)
             await dataStore.saveRecording(newRecording)
             
-            // 開始監控處理狀態
-            startMonitoringForProcessing()
-            
-            // 立即觸發一次狀態檢查
-            Task {
-                await self.checkAndRefreshIfNeeded()
-            }
+            // 不再需要輪詢，等待推送通知
             
             isUploading = false
             uploadProgress = 0.0
@@ -316,21 +292,16 @@ class RecordingManager: ObservableObject {
     }
     
     func updateRecordingTitle(recordingId: UUID, newTitle: String) async -> Bool {
-        do {
-            // TODO: 實現伺服器端的更新標題 API
-            // try await networkService.updateRecordingTitle(id: recordingId, title: newTitle)
-            
-            // 暫時只更新本地數據
-            if let index = recordings.firstIndex(where: { $0.id == recordingId }) {
-                recordings[index].title = newTitle
-                await dataStore.saveRecording(recordings[index])
-                return true
-            }
-            return false
-        } catch {
-            self.error = "更新標題失敗：\(error.localizedDescription)"
-            return false
+        // TODO: 實現伺服器端的更新標題 API
+        // try await networkService.updateRecordingTitle(id: recordingId, title: newTitle)
+        
+        // 暫時只更新本地數據
+        if let index = recordings.firstIndex(where: { $0.id == recordingId }) {
+            recordings[index].title = newTitle
+            await dataStore.saveRecording(recordings[index])
+            return true
         }
+        return false
     }
 }
 

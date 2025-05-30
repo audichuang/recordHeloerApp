@@ -232,8 +232,7 @@ struct RecordingDetailView: View {
         
         // 添加延遲以確保視圖完全載入
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            // 暫停自動刷新以避免數據更新造成視圖跳出
-            recordingManager.stopMonitoringForProcessing()
+            // 不再需要暫停刷新，因為已經移除輪詢機制
             
             // 解析 SRT 內容
             if detailRecording.srtContent != nil {
@@ -264,8 +263,7 @@ struct RecordingDetailView: View {
     }
     
     private func handleOnDisappear() {
-        // 恢復自動刷新
-        recordingManager.startMonitoringForProcessing()
+        // 不再需要恢復刷新，因為已經移除輪詢機制
         // 清理音頻播放器資源
         audioPlayer.cleanup()
     }

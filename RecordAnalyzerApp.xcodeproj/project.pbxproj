@@ -15,6 +15,7 @@
 		2CC840EC6A242E670F2AFBEB /* RecordingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109590A2D24230F184CD183E /* RecordingManager.swift */; };
 		402163F254DAF5696C958B7B /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFA7D8A44848E1A61A63D4D7 /* NotificationService.swift */; };
 		555734609D1A055C9BAC6F2A /* AuthenticationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2EF63FDE11E30EB66798573 /* AuthenticationManager.swift */; };
+		60E13C8BCA1EAFCD9A368D70 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1BB2714ADE0CCB8FF9900A /* NotificationManager.swift */; };
 		713A757A0CA06E85620571CD /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D96D560BB58104D674BCF4B5 /* HomeView.swift */; };
 		7180BB74EF8A6642FEA53C81 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4917F2FFCC5056779716A4C9 /* RegisterView.swift */; };
 		760120E652109B122D98D9DA /* CardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75CD83C433828362F72DC83E /* CardView.swift */; };
@@ -67,6 +68,7 @@
 		75CD83C433828362F72DC83E /* CardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CardView.swift; path = RecordAnalyzer/Views/Components/CardView.swift; sourceTree = "<group>"; };
 		76B8E7C233FEF26D62EB3613 /* ProfileView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProfileView.swift; path = RecordAnalyzer/Views/Profile/ProfileView.swift; sourceTree = "<group>"; };
 		7ACC62807824E03FB8A23B71 /* HistoryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HistoryView.swift; path = RecordAnalyzer/Views/History/HistoryView.swift; sourceTree = "<group>"; };
+		7B1BB2714ADE0CCB8FF9900A /* NotificationManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotificationManager.swift; path = RecordAnalyzer/Managers/NotificationManager.swift; sourceTree = "<group>"; };
 		8A03487D2DE725B000E780E2 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		8A816D0E2DE597ED00F22D75 /* NetworkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkService.swift; sourceTree = "<group>"; };
 		8FE90B4735CBA06CF7BAA3F7 /* LoginView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LoginView.swift; path = RecordAnalyzer/Views/Authentication/LoginView.swift; sourceTree = "<group>"; };
@@ -145,6 +147,7 @@
 				0AB0D991D3F58DA03997269B /* AccountCenterView.swift */,
 				73D7E0A9ABD1DC29C16CD77D /* AudioPlayerManager.swift */,
 				D6CBA5FDD624191646C446B0 /* AnimatedCardView.swift */,
+				7B1BB2714ADE0CCB8FF9900A /* NotificationManager.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -372,6 +375,7 @@
 				C34F6425D81B7D6F87E805ED /* AccountCenterView.swift in Sources */,
 				ADF9179789570C0F2C4CF814 /* AudioPlayerManager.swift in Sources */,
 				B85964D000F46373B59508F9 /* AnimatedCardView.swift in Sources */,
+				60E13C8BCA1EAFCD9A368D70 /* NotificationManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

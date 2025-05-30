@@ -929,6 +929,11 @@ class NetworkService: ObservableObject {
         print("✅ 成功刪除錄音: \(id.uuidString)")
     }
     
+    /// 獲取特定錄音（UUID版本）
+    func getRecording(id: UUID) async throws -> Recording {
+        return try await getRecordingDetail(id: id.uuidString)
+    }
+    
     /// 獲取特定錄音的詳細信息（包含完整轉錄和摘要）
     func getRecordingDetail(id: String) async throws -> Recording {
         guard let token = getAuthToken() else {

@@ -7,10 +7,10 @@ struct RecordingSummary: Identifiable, Codable, Equatable, Sendable {
     let title: String
     let duration: TimeInterval?
     let fileSize: Int?
-    let status: String?
+    var status: String?
     let createdAt: Date
-    let hasTranscript: Bool
-    let hasSummary: Bool
+    var hasTranscript: Bool
+    var hasSummary: Bool
     
     enum CodingKeys: String, CodingKey {
         case id

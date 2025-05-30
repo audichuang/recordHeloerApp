@@ -73,6 +73,9 @@ class AuthenticationManager: ObservableObject {
             
             // 保存認證狀態
             await dataStore.saveUser(user)
+            
+            // 發送設備 Token（如果有的話）
+            NotificationManager.shared.sendDeviceTokenIfAvailable()
         } catch {
             self.errorMessage = "登入失敗：\(error.localizedDescription)"
             self.isLoading = false
@@ -132,6 +135,9 @@ class AuthenticationManager: ObservableObject {
             
             // 保存認證狀態
             await dataStore.saveUser(user)
+            
+            // 發送設備 Token（如果有的話）
+            NotificationManager.shared.sendDeviceTokenIfAvailable()
         } catch {
             self.errorMessage = "Apple 登入失敗：\(error.localizedDescription)"
             self.isLoading = false
@@ -154,6 +160,9 @@ class AuthenticationManager: ObservableObject {
                 
                 // 更新本地保存的用戶信息
                 await dataStore.saveUser(currentUser)
+                
+                // 發送設備 Token（如果有的話）
+                NotificationManager.shared.sendDeviceTokenIfAvailable()
             } catch {
                 print("令牌驗證失敗: \(error)")
                 // Token無效，清除本地狀態
@@ -181,6 +190,9 @@ class AuthenticationManager: ObservableObject {
                 
                 // 更新本地保存的用戶信息
                 await dataStore.saveUser(currentUser)
+                
+                // 發送設備 Token（如果有的話）
+                NotificationManager.shared.sendDeviceTokenIfAvailable()
             } catch {
                 print("令牌驗證失敗: \(error)")
                 // 檢查是否有保存的用戶數據
