@@ -307,7 +307,10 @@ struct HomeView: View {
         }
         
         private func formatDuration(_ seconds: Double?) -> String {
-            guard let seconds = seconds else { return "--:--" }
+            // 檢查 duration 是否為 nil 或無效值
+            guard let seconds = seconds, seconds > 0, seconds.isFinite else { 
+                return "--:--" 
+            }
             let minutes = Int(seconds) / 60
             let remainingSeconds = Int(seconds) % 60
             return String(format: "%d:%02d", minutes, remainingSeconds)

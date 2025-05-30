@@ -622,7 +622,7 @@ struct RecordingDetailView: View {
                 GridItem(.flexible()),
                 GridItem(.flexible())
             ], spacing: 12) {
-                ModernInfoCard(icon: "clock", title: "時長", value: detailRecording.formattedDuration, color: AppTheme.Colors.info)
+                ModernInfoCard(icon: "clock", title: "時長", value: detailRecording.status == "processing" && detailRecording.formattedDuration == "--:--" ? "處理中..." : detailRecording.formattedDuration, color: AppTheme.Colors.info)
                 ModernInfoCard(icon: "calendar", title: "日期", value: detailRecording.formattedDate, color: AppTheme.Colors.secondary)
                 ModernInfoCard(icon: "doc", title: "大小", value: detailRecording.formattedFileSize, color: AppTheme.Colors.success)
             }

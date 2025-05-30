@@ -82,7 +82,12 @@ struct RecordingSummary: Identifiable, Codable, Equatable, Sendable {
     
     // 格式化屬性
     var formattedDuration: String {
-        guard let duration = duration, duration > 0 else { return "--:--" }
+        // 檢查 duration 是否為 nil 或無效值
+        guard let duration = duration, duration > 0, duration.isFinite else { 
+            return "--:--" 
+        }
+        
+        // 將秒數轉換為分鐘和秒
         let totalSeconds = Int(duration)
         let minutes = totalSeconds / 60
         let seconds = totalSeconds % 60
@@ -302,7 +307,12 @@ struct Recording: Identifiable, Codable, Equatable, Sendable {
     }
     
     var formattedDuration: String {
-        guard let duration = duration, duration > 0 else { return "--:--" }
+        // 檢查 duration 是否為 nil 或無效值
+        guard let duration = duration, duration > 0, duration.isFinite else { 
+            return "--:--" 
+        }
+        
+        // 將秒數轉換為分鐘和秒
         let totalSeconds = Int(duration)
         let minutes = totalSeconds / 60
         let seconds = totalSeconds % 60

@@ -153,6 +153,10 @@ struct RecordingRowView: View {
     
     // MARK: - 格式化方法
     private func formatDuration(_ seconds: Double) -> String {
+        // 檢查是否為有效值
+        guard seconds > 0 && seconds.isFinite else {
+            return "--:--"
+        }
         let minutes = Int(seconds) / 60
         let remainingSeconds = Int(seconds) % 60
         return String(format: "%d:%02d", minutes, remainingSeconds)
@@ -206,6 +210,10 @@ struct CompactRecordingRow: View {
     }
     
     private func formatDuration(_ seconds: Double) -> String {
+        // 檢查是否為有效值
+        guard seconds > 0 && seconds.isFinite else {
+            return "--:--"
+        }
         let minutes = Int(seconds) / 60
         let remainingSeconds = Int(seconds) % 60
         return String(format: "%d:%02d", minutes, remainingSeconds)
