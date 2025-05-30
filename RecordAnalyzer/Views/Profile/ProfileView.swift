@@ -185,6 +185,44 @@ struct ProfileView: View {
                 }
             )
             
+            NavigationLink(destination: PromptTemplateListView()) {
+                HStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(AppTheme.Colors.info.opacity(0.1))
+                            .frame(width: 40, height: 40)
+                        
+                        Image(systemName: "doc.text.magnifyingglass")
+                            .font(.system(size: 16))
+                            .foregroundColor(AppTheme.Colors.info)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("摘要模板")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(AppTheme.Colors.textPrimary)
+                        
+                        Text("管理AI摘要生成模板")
+                            .font(.caption)
+                            .foregroundColor(AppTheme.Colors.textSecondary)
+                            .lineLimit(2)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(AppTheme.Colors.textTertiary)
+                }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
+                        .fill(AppTheme.Colors.cardHighlight)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            
             ModernSettingRow(
                 icon: "bell",
                 title: "通知設定",

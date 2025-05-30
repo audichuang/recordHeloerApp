@@ -4,10 +4,12 @@ import UniformTypeIdentifiers
 struct HomeView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var recordingManager: RecordingManager
+    @EnvironmentObject var templateManager: PromptTemplateManager
     @State private var showingFilePicker = false
     @State private var showingUploadDialog = false
     @State private var uploadTitle = ""
     @State private var selectedFileURL: URL?
+    @State private var selectedTemplate: PromptTemplate?
     @State private var errorMessage: String?
     @State private var showingErrorAlert = false
     @State private var animateCards = false
@@ -79,7 +81,35 @@ struct HomeView: View {
         ) { result in
             handleFileSelection(result)
         }
-        .alert("上傳錄音", isPresented: $showingUploadDialog, actions: uploadDialogActions, message: uploadDialogMessage)
+        .sheet(isPresented: $showingUploadDialog) {
+            UploadDialogView(
+                fileURL: $selectedFileURL,
+                uploadTitle: $uploadTitle,
+                selectedTemplate: $selectedTemplate,
+                templateManager: templateManager,
+                onUpload: {
+                    Task {
+                        if let url = selectedFileURL {
+                            _ = await recordingManager.uploadRecording(
+                                fileURL: url,
+                                title: uploadTitle.isEmpty ? "未命名錄音" : uploadTitle,
+                                promptTemplateId: selectedTemplate?.id
+                            )
+                            uploadTitle = ""
+                            selectedFileURL = nil
+                            selectedTemplate = nil
+                            showingUploadDialog = false
+                        }
+                    }
+                },
+                onCancel: {
+                    uploadTitle = ""
+                    selectedFileURL = nil
+                    selectedTemplate = nil
+                    showingUploadDialog = false
+                }
+            )
+        }
         .alert("上傳錯誤", isPresented: $showingErrorAlert) {
             Button("確定", role: .cancel) { errorMessage = nil }
         } message: {
@@ -444,35 +474,6 @@ struct HomeView: View {
     }
     
     // MARK: - Dialog Actions
-    private func uploadDialogActions() -> some View {
-        Group {
-            TextField("請輸入錄音標題", text: $uploadTitle)
-            Button("上傳") {
-                if let url = selectedFileURL {
-                    Task {
-                        _ = await recordingManager.uploadRecording(
-                            fileURL: url,
-                            title: uploadTitle.isEmpty ? "未命名錄音" : uploadTitle
-                        )
-                        uploadTitle = ""
-                        selectedFileURL = nil
-                    }
-                }
-            }
-            Button("取消", role: .cancel) {
-                uploadTitle = ""
-                selectedFileURL = nil
-            }
-        }
-    }
-    
-    private func uploadDialogMessage() -> some View {
-        if let url = selectedFileURL {
-            return Text("將上傳: \(url.lastPathComponent)")
-        } else {
-            return Text("請為您的錄音檔案輸入一個標題")
-        }
-    }
     
     private func editDialogActions() -> some View {
         Group {

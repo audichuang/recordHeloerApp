@@ -139,7 +139,7 @@ class RecordingManager: ObservableObject {
     
     
     
-    func uploadRecording(fileURL: URL, title: String) async -> Recording? {
+    func uploadRecording(fileURL: URL, title: String, promptTemplateId: Int? = nil) async -> Recording? {
         isUploading = true
         uploadProgress = 0.0
         error = nil
@@ -180,6 +180,7 @@ class RecordingManager: ObservableObject {
             let uploadedRecording = try await networkService.uploadRecording(
                 fileURL: fileURL,
                 title: title,
+                promptTemplateId: promptTemplateId,
                 onProgress: { progress in
                     // 在主線程更新進度
                     DispatchQueue.main.async {

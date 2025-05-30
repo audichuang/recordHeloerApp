@@ -59,10 +59,13 @@ class NetworkService: ObservableObject {
         config.httpCookieAcceptPolicy = .always
         config.httpCookieStorage = HTTPCookieStorage.shared
         config.httpShouldUsePipelining = true
-        // 重要：這將確保授權標頭在重定向時被保留
         config.httpMaximumConnectionsPerHost = 10
+        config.waitsForConnectivity = true
         
-        return URLSession(configuration: config)
+        // 創建自定義委託來處理重定向
+        let delegate = NetworkServiceDelegate()
+        
+        return URLSession(configuration: config, delegate: delegate, delegateQueue: nil)
     }()
     
     @Published var isConnected = false
@@ -155,8 +158,14 @@ class NetworkService: ObservableObject {
         requiresAuth: Bool = false,
         responseType: T.Type
     ) async throws -> T {
-        // 確保 endpoint 沒有尾部斜線（除非是根路徑）
-        let cleanEndpoint = endpoint.hasSuffix("/") && endpoint != "/" ? String(endpoint.dropLast()) : endpoint
+        // 特殊處理：prompt-templates 端點需要尾部斜線
+        let cleanEndpoint: String
+        if endpoint.contains("prompt-templates") && !endpoint.hasSuffix("/") && !endpoint.contains("default") && !endpoint.contains("set-default") {
+            cleanEndpoint = endpoint + "/"
+        } else {
+            // 其他端點：確保沒有尾部斜線（除非是根路徑）
+            cleanEndpoint = endpoint.hasSuffix("/") && endpoint != "/" ? String(endpoint.dropLast()) : endpoint
+        }
         
         guard let request = buildRequest(
             endpoint: cleanEndpoint,
@@ -171,6 +180,9 @@ class NetworkService: ObservableObject {
         print("📡 發送請求: \(method.rawValue) \(request.url?.absoluteString ?? "unknown")")
         if requiresAuth {
             print("🔐 請求包含授權標頭: \(request.value(forHTTPHeaderField: "Authorization") != nil ? "是" : "否")")
+            if let authHeader = request.value(forHTTPHeaderField: "Authorization") {
+                print("🔑 授權標頭內容: \(String(authHeader.prefix(20)))...")
+            }
         }
         
         do {
@@ -591,7 +603,7 @@ class NetworkService: ObservableObject {
         return try await getRecordingsSummary(page: 1, perPage: limit)
     }
     
-    func uploadRecording(fileURL: URL, title: String, onProgress: @escaping @Sendable (Double) -> Void) async throws -> Recording {
+    func uploadRecording(fileURL: URL, title: String, promptTemplateId: Int? = nil, onProgress: @escaping @Sendable (Double) -> Void) async throws -> Recording {
         // 1. 檢查文件是否存在
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
             print("⚠️ 錯誤: 錄音文件不存在: \(fileURL.path)")
@@ -680,6 +692,18 @@ class NetworkService: ObservableObject {
                 writeToStream(outputStream, data: titlePrefix.data(using: .utf8)!)
                 writeToStream(outputStream, data: title.data(using: .utf8)!)
                 writeToStream(outputStream, data: titleSuffix.data(using: .utf8)!)
+                
+                // Prompt Template ID 部分（如果提供）
+                if let templateId = promptTemplateId {
+                    let templatePrefix = "--\(boundary)\r\nContent-Disposition: form-data; name=\"prompt_template_id\"\r\n\r\n"
+                    let templateSuffix = "\r\n"
+                    
+                    print("📝 寫入模板ID: \(templateId)")
+                    
+                    writeToStream(outputStream, data: templatePrefix.data(using: .utf8)!)
+                    writeToStream(outputStream, data: "\(templateId)".data(using: .utf8)!)
+                    writeToStream(outputStream, data: templateSuffix.data(using: .utf8)!)
+                }
                 
                 // 文件部分
                 let filePrefix = "--\(boundary)\r\nContent-Disposition: form-data; name=\"file\"; filename=\"\(fileURL.lastPathComponent)\"\r\nContent-Type: \(mimeTypeForFileExtension(fileURL.pathExtension))\r\n\r\n"
@@ -1047,10 +1071,13 @@ class NetworkService: ObservableObject {
     }
     
     /// 重新生成摘要
-    func regenerateSummary(recordingId: String, provider: String? = nil) async throws -> RegenerateResponse {
+    func regenerateSummary(recordingId: String, provider: String? = nil, promptTemplateId: Int? = nil) async throws -> RegenerateResponse {
         var requestBody: [String: Any] = [:]
         if let provider = provider {
             requestBody["provider"] = provider
+        }
+        if let templateId = promptTemplateId {
+            requestBody["prompt_template_id"] = templateId
         }
         
         let requestData = try JSONSerialization.data(withJSONObject: requestBody)
@@ -1217,6 +1244,88 @@ class NetworkService: ObservableObject {
             return "audio/octet-stream"  // 通用音頻類型
         }
     }
+    
+    // MARK: - Prompt Template Methods
+    
+    func getPromptTemplates() async throws -> [PromptTemplate] {
+        let response: [PromptTemplateResponse] = try await performRequest(
+            endpoint: "/prompt-templates/",  // 確保有尾部斜線
+            method: .GET,
+            requiresAuth: true,
+            responseType: [PromptTemplateResponse].self
+        )
+        
+        return response.map { $0.toPromptTemplate() }
+    }
+    
+    func getDefaultPromptTemplate() async throws -> PromptTemplate? {
+        let response: DefaultTemplateResponse = try await performRequest(
+            endpoint: "/prompt-templates/default",
+            method: .GET,
+            requiresAuth: true,
+            responseType: DefaultTemplateResponse.self
+        )
+        
+        return response.defaultTemplate?.toPromptTemplate()
+    }
+    
+    func createPromptTemplate(name: String, description: String?, prompt: String) async throws -> PromptTemplate {
+        let requestBody = CreatePromptTemplateRequest(
+            name: name,
+            description: description,
+            prompt: prompt
+        )
+        
+        let requestData = try JSONEncoder().encode(requestBody)
+        
+        let response: PromptTemplateResponse = try await performRequest(
+            endpoint: "/prompt-templates/",  // 確保有尾部斜線
+            method: .POST,
+            body: requestData,
+            requiresAuth: true,
+            responseType: PromptTemplateResponse.self
+        )
+        
+        return response.toPromptTemplate()
+    }
+    
+    func updatePromptTemplate(id: Int, name: String, description: String?, prompt: String) async throws -> PromptTemplate {
+        let requestBody = UpdatePromptTemplateRequest(
+            name: name,
+            description: description,
+            prompt: prompt
+        )
+        
+        let requestData = try JSONEncoder().encode(requestBody)
+        
+        let response: PromptTemplateResponse = try await performRequest(
+            endpoint: "/prompt-templates/\(id)",
+            method: .PUT,
+            body: requestData,
+            requiresAuth: true,
+            responseType: PromptTemplateResponse.self
+        )
+        
+        return response.toPromptTemplate()
+    }
+    
+    func deletePromptTemplate(id: Int) async throws {
+        let _: EmptyResponse = try await performRequest(
+            endpoint: "/prompt-templates/\(id)",
+            method: .DELETE,
+            requiresAuth: true,
+            responseType: EmptyResponse.self
+        )
+    }
+    
+    func setDefaultPromptTemplate(id: Int) async throws {
+        let _: PromptTemplateResponse = try await performRequest(
+            endpoint: "/prompt-templates/\(id)/set-default",
+            method: .PUT,
+            requiresAuth: true,
+            responseType: PromptTemplateResponse.self
+        )
+    }
 }
 
 // MARK: - Supporting Types
@@ -1375,6 +1484,25 @@ struct RegenerateResponse: Codable {
         case taskId = "history_id"  // 後端返回的是 history_id
         case message
         case status
+    }
+}
+
+// MARK: - Network Service Delegate
+class NetworkServiceDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+        print("🔄 NetworkService 處理重定向: \(response.statusCode) -> \(request.url?.absoluteString ?? "unknown")")
+        
+        // 創建新請求，保留原始請求的所有標頭
+        var newReq = request
+        
+        // 複製原始請求的授權標頭
+        if let originalRequest = task.originalRequest,
+           let authHeader = originalRequest.value(forHTTPHeaderField: "Authorization") {
+            newReq.setValue(authHeader, forHTTPHeaderField: "Authorization")
+            print("🔑 重定向時保留授權標頭")
+        }
+        
+        completionHandler(newReq)
     }
 }
 

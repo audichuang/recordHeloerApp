@@ -36,6 +36,7 @@ struct RecordAnalyzerApp: App {
     @StateObject private var recordingManager = RecordingManager()
     @StateObject private var notificationService = NotificationService.shared
     @StateObject private var notificationManager = NotificationManager.shared
+    @StateObject private var promptTemplateManager = PromptTemplateManager()
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var incomingFileURL: URL?
     @State private var showingFileImport = false
@@ -53,6 +54,7 @@ struct RecordAnalyzerApp: App {
                         .environmentObject(recordingManager)
                         .environmentObject(notificationService)
                         .environmentObject(notificationManager)
+                        .environmentObject(promptTemplateManager)
                         .sheet(isPresented: $showingFileImport) {
                             if let fileURL = incomingFileURL {
                                 FileImportView(fileURL: fileURL) {
@@ -62,6 +64,7 @@ struct RecordAnalyzerApp: App {
                                 }
                                 .environmentObject(recordingManager)
                                 .environmentObject(authManager)
+                                .environmentObject(promptTemplateManager)
                             }
                         }
                         .onOpenURL { url in
@@ -112,6 +115,11 @@ struct RecordAnalyzerApp: App {
     private func checkAuthenticationStatus() {
         Task {
             await authManager.verifyAuthenticationStatus()
+            
+            // 如果用戶已登入，載入模板
+            if authManager.isAuthenticated {
+                await promptTemplateManager.loadTemplates()
+            }
             
             // 檢查完成後，延遲一下再隱藏啟動畫面
             try? await Task.sleep(nanoseconds: 500_000_000) // 0.5秒
@@ -260,7 +268,7 @@ struct FileImportView: View {
             try FileManager.default.copyItem(at: fileURL, to: tempFileURL)
             
             // 上傳文件
-            try await recordingManager.uploadRecording(
+            _ = try await recordingManager.uploadRecording(
                 fileURL: tempFileURL,
                 title: fileURL.deletingPathExtension().lastPathComponent
             )

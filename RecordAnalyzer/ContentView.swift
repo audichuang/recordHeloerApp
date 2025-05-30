@@ -180,4 +180,5 @@ extension Color {
     ContentView()
         .environmentObject(AuthenticationManager())
         .environmentObject(RecordingManager())
+        .environmentObject(PromptTemplateManager())
 } 

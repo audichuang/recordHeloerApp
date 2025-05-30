@@ -22,6 +22,9 @@ struct RecordingDetailView: View {
     @StateObject private var audioPlayer = AudioPlayerManager()
     @State private var isInitialized = false
     @EnvironmentObject var recordingManager: RecordingManager
+    @StateObject private var templateManager = PromptTemplateManager()
+    @State private var showingTemplateSelector = false
+    @State private var selectedTemplate: PromptTemplate?
     
     private let networkService = NetworkService.shared
     
@@ -486,14 +489,17 @@ struct RecordingDetailView: View {
         }
     }
     
-    private func regenerateSummary() async {
+    private func regenerateSummary(with templateId: Int? = nil) async {
         await MainActor.run {
             isRegeneratingSummary = true
             regenerateError = nil
         }
         
         do {
-            let response = try await networkService.regenerateSummary(recordingId: detailRecording.id.uuidString)
+            let response = try await networkService.regenerateSummary(
+                recordingId: detailRecording.id.uuidString,
+                promptTemplateId: templateId
+            )
             print("🔄 開始重新生成摘要: \(response.message)")
             
             // 顯示處理中的提示
@@ -767,15 +773,51 @@ struct RecordingDetailView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     // 操作按鈕組
                     HStack(spacing: 12) {
-                        // 重新生成按鈕
-                        RegenerateButton(
-                            title: "重新生成",
-                            isLoading: isRegeneratingSummary,
-                            gradient: AppTheme.Gradients.success
-                        ) {
-                            Task {
-                                await regenerateSummary()
+                        // 重新生成按鈕（支援模板選擇）
+                        Menu {
+                            Button {
+                                Task {
+                                    await regenerateSummary()
+                                }
+                            } label: {
+                                Label("使用當前模板", systemImage: "arrow.clockwise")
                             }
+                            
+                            Divider()
+                            
+                            // 系統模板
+                            Section("系統模板") {
+                                ForEach(templateManager.getSystemTemplates()) { template in
+                                    Button {
+                                        Task {
+                                            await regenerateSummary(with: template.id)
+                                        }
+                                    } label: {
+                                        Label(template.name, systemImage: template.displayIcon)
+                                    }
+                                }
+                            }
+                            
+                            // 自定義模板
+                            if !templateManager.getUserTemplates().isEmpty {
+                                Section("我的模板") {
+                                    ForEach(templateManager.getUserTemplates()) { template in
+                                        Button {
+                                            Task {
+                                                await regenerateSummary(with: template.id)
+                                            }
+                                        } label: {
+                                            Label(template.name, systemImage: template.displayIcon)
+                                        }
+                                    }
+                                }
+                            }
+                        } label: {
+                            RegenerateButton(
+                                title: "重新生成",
+                                isLoading: isRegeneratingSummary,
+                                gradient: AppTheme.Gradients.success
+                            ) { }
                         }
                         .disabled(isRegeneratingSummary || detailRecording.status != "completed")
                         

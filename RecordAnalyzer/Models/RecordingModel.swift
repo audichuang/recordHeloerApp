@@ -205,6 +205,8 @@ struct Recording: Identifiable, Codable, Equatable, Sendable {
     let srtContent: String?
     let hasTimestamps: Bool
     let timestampsData: TimestampsData?
+    let promptTemplateId: Int?
+    let promptTemplateSnapshot: String? // 保存使用時的 prompt 內容
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -225,6 +227,8 @@ struct Recording: Identifiable, Codable, Equatable, Sendable {
         case srtContent = "srt_content"
         case hasTimestamps = "has_timestamps"
         case timestampsData = "timestamps_data"
+        case promptTemplateId = "prompt_template_id"
+        case promptTemplateSnapshot = "prompt_template_snapshot"
     }
     
     init(from decoder: Decoder) throws {
@@ -286,9 +290,14 @@ struct Recording: Identifiable, Codable, Equatable, Sendable {
         srtContent = try container.decodeIfPresent(String.self, forKey: .srtContent)
         hasTimestamps = try container.decodeIfPresent(Bool.self, forKey: .hasTimestamps) ?? false
         timestampsData = try container.decodeIfPresent(TimestampsData.self, forKey: .timestampsData)
+        
+        // 處理 prompt template 相關欄位
+        // 後端返回的是整數 ID
+        promptTemplateId = try container.decodeIfPresent(Int.self, forKey: .promptTemplateId)
+        promptTemplateSnapshot = try container.decodeIfPresent(String.self, forKey: .promptTemplateSnapshot)
     }
     
-    init(id: UUID = UUID(), title: String, originalFilename: String, format: String, mimeType: String, duration: TimeInterval? = nil, createdAt: Date, transcription: String? = nil, summary: String? = nil, fileURL: URL? = nil, fileSize: Int? = nil, status: String? = nil, timelineTranscript: String? = nil, hasTimeline: Bool = false, analysisMetadata: [String: String]? = nil, srtContent: String? = nil, hasTimestamps: Bool = false, timestampsData: TimestampsData? = nil) {
+    init(id: UUID = UUID(), title: String, originalFilename: String, format: String, mimeType: String, duration: TimeInterval? = nil, createdAt: Date, transcription: String? = nil, summary: String? = nil, fileURL: URL? = nil, fileSize: Int? = nil, status: String? = nil, timelineTranscript: String? = nil, hasTimeline: Bool = false, analysisMetadata: [String: String]? = nil, srtContent: String? = nil, hasTimestamps: Bool = false, timestampsData: TimestampsData? = nil, promptTemplateId: Int? = nil, promptTemplateSnapshot: String? = nil) {
         self.id = id
         self.title = title
         self.originalFilename = originalFilename
@@ -307,6 +316,8 @@ struct Recording: Identifiable, Codable, Equatable, Sendable {
         self.srtContent = srtContent
         self.hasTimestamps = hasTimestamps
         self.timestampsData = timestampsData
+        self.promptTemplateId = promptTemplateId
+        self.promptTemplateSnapshot = promptTemplateSnapshot
     }
     
     // 為了向後兼容，保留fileName屬性，但指向originalFilename

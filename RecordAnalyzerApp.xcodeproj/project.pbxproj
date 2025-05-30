@@ -11,9 +11,12 @@
 		19A18C4EFBA2FBA9EC7B5A18 /* MarkdownText.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCE1F08525744ABCAE8ACCD7 /* MarkdownText.swift */; };
 		1B5F54DC98F68AE768AAE3BA /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DBE02A9E78EC3149A0A5F85 /* SplashView.swift */; };
 		1FB5A0766BE818E4744998BF /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D59EF6B54EB69C21D9E9FBD2 /* Theme.swift */; };
+		1FE67AD52BDB59141D04FB78 /* PromptTemplateListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31B857E05156EDF4DB685518 /* PromptTemplateListView.swift */; };
+		2010AD3F1ADF86C8F3829A8B /* PromptTemplateEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 555EAC66B30099C58F24DAC6 /* PromptTemplateEditView.swift */; };
 		2C83DDC00387710E7EDF471E /* RecordingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F37804AF41E4879F9B5964D /* RecordingDetailView.swift */; };
 		2CC840EC6A242E670F2AFBEB /* RecordingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109590A2D24230F184CD183E /* RecordingManager.swift */; };
 		402163F254DAF5696C958B7B /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFA7D8A44848E1A61A63D4D7 /* NotificationService.swift */; };
+		52B4664E671E60F247BC9713 /* PromptTemplateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B3A88B579936388678CE3EA /* PromptTemplateManager.swift */; };
 		555734609D1A055C9BAC6F2A /* AuthenticationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2EF63FDE11E30EB66798573 /* AuthenticationManager.swift */; };
 		60E13C8BCA1EAFCD9A368D70 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1BB2714ADE0CCB8FF9900A /* NotificationManager.swift */; };
 		713A757A0CA06E85620571CD /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D96D560BB58104D674BCF4B5 /* HomeView.swift */; };
@@ -21,11 +24,13 @@
 		760120E652109B122D98D9DA /* CardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75CD83C433828362F72DC83E /* CardView.swift */; };
 		785D73A7B1F4FF5741B7E1EE /* ProcessingStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC4098DF54F27191578A9DDD /* ProcessingStatusView.swift */; };
 		8070BC749AFAA4A14D8BF186 /* RegenerateButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FDE5221AD36AD97C1F1F67B /* RegenerateButton.swift */; };
+		83BC7CCC7A97ACD7887AB073 /* UploadDialogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 769CD3B6883ECF8A07BC11A1 /* UploadDialogView.swift */; };
 		859FD6BA179833D2BD70CDC3 /* GradientText.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0B7F0A108E83268BCB9E52 /* GradientText.swift */; };
 		8A03487E2DE725B000E780E2 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A03487D2DE725B000E780E2 /* Theme.swift */; };
 		8A37A18A2DE6EA010045F096 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 8A37A1892DE6EA010045F096 /* MarkdownUI */; };
 		8A816D102DE597ED00F22D75 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A816D0E2DE597ED00F22D75 /* NetworkService.swift */; };
 		8B0DA5A1A2918C964979AA8E /* GradientButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 929B54721F25EF59754FAF3C /* GradientButton.swift */; };
+		8F3826EDBBC7782B9A49B5C7 /* PromptTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D494C654A77B5D5E2148A78D /* PromptTemplate.swift */; };
 		92D77D1DD071EC10E6EF0A7F /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EFA669C8B57165CA9730155 /* NetworkService.swift */; };
 		ADF9179789570C0F2C4CF814 /* AudioPlayerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73D7E0A9ABD1DC29C16CD77D /* AudioPlayerManager.swift */; };
 		B3C61FA1F04A9F8E71119E21 /* RecordingRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DB34D703FEA8CDC7B01DECC /* RecordingRowView.swift */; };
@@ -48,6 +53,7 @@
 		CE27 /* RecordingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE28 /* RecordingDetailView.swift */; };
 		CE54 /* MarkdownText.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE55 /* MarkdownText.swift */; };
 		CE87FBC0D60B1C750AFF828D /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76B8E7C233FEF26D62EB3613 /* ProfileView.swift */; };
+		CF21ECFEBF245E596E9D0595 /* PromptTemplateSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B8BF24576F9035F2F0F7A4B /* PromptTemplateSelector.swift */; };
 		DFABF3A27927D69B6EF33F86 /* AppleAuthenticationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081F05A28F7B7EC985E98A7A /* AppleAuthenticationManager.swift */; };
 		E2FC998E3F7E3BDE490C74EF /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ACC62807824E03FB8A23B71 /* HistoryView.swift */; };
 		E57B56EF44EC871A2877C1BC /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FE90B4735CBA06CF7BAA3F7 /* LoginView.swift */; };
@@ -60,18 +66,23 @@
 		1C4837839227014DA8EB16C1 /* RecordingModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RecordingModel.swift; path = RecordAnalyzer/Models/RecordingModel.swift; sourceTree = "<group>"; };
 		1DB34D703FEA8CDC7B01DECC /* RecordingRowView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RecordingRowView.swift; path = RecordAnalyzer/Views/Components/RecordingRowView.swift; sourceTree = "<group>"; };
 		26E9F1DEDC7E3C7C2A569F18 /* AnalysisHistoryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AnalysisHistoryView.swift; path = RecordAnalyzer/Views/Recording/AnalysisHistoryView.swift; sourceTree = "<group>"; };
+		31B857E05156EDF4DB685518 /* PromptTemplateListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PromptTemplateListView.swift; path = RecordAnalyzer/Views/Profile/PromptTemplateListView.swift; sourceTree = "<group>"; };
 		3F37804AF41E4879F9B5964D /* RecordingDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RecordingDetailView.swift; path = RecordAnalyzer/Views/Recording/RecordingDetailView.swift; sourceTree = "<group>"; };
 		4917F2FFCC5056779716A4C9 /* RegisterView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RegisterView.swift; path = RecordAnalyzer/Views/Authentication/RegisterView.swift; sourceTree = "<group>"; };
 		4DBE02A9E78EC3149A0A5F85 /* SplashView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SplashView.swift; path = RecordAnalyzer/Views/SplashView.swift; sourceTree = "<group>"; };
 		4EFA669C8B57165CA9730155 /* NetworkService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NetworkService.swift; path = RecordAnalyzer/Services/NetworkService.swift; sourceTree = "<group>"; };
+		555EAC66B30099C58F24DAC6 /* PromptTemplateEditView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PromptTemplateEditView.swift; path = RecordAnalyzer/Views/Profile/PromptTemplateEditView.swift; sourceTree = "<group>"; };
+		6B8BF24576F9035F2F0F7A4B /* PromptTemplateSelector.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PromptTemplateSelector.swift; path = RecordAnalyzer/Views/Components/PromptTemplateSelector.swift; sourceTree = "<group>"; };
 		6FDE5221AD36AD97C1F1F67B /* RegenerateButton.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = RegenerateButton.swift; path = RecordAnalyzer/Views/Components/RegenerateButton.swift; sourceTree = "<group>"; };
 		73D7E0A9ABD1DC29C16CD77D /* AudioPlayerManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AudioPlayerManager.swift; path = RecordAnalyzer/Managers/AudioPlayerManager.swift; sourceTree = "<group>"; };
 		75CD83C433828362F72DC83E /* CardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CardView.swift; path = RecordAnalyzer/Views/Components/CardView.swift; sourceTree = "<group>"; };
+		769CD3B6883ECF8A07BC11A1 /* UploadDialogView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = UploadDialogView.swift; path = RecordAnalyzer/Views/Components/UploadDialogView.swift; sourceTree = "<group>"; };
 		76B8E7C233FEF26D62EB3613 /* ProfileView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProfileView.swift; path = RecordAnalyzer/Views/Profile/ProfileView.swift; sourceTree = "<group>"; };
 		7ACC62807824E03FB8A23B71 /* HistoryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HistoryView.swift; path = RecordAnalyzer/Views/History/HistoryView.swift; sourceTree = "<group>"; };
 		7B1BB2714ADE0CCB8FF9900A /* NotificationManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotificationManager.swift; path = RecordAnalyzer/Managers/NotificationManager.swift; sourceTree = "<group>"; };
 		8A03487D2DE725B000E780E2 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		8A816D0E2DE597ED00F22D75 /* NetworkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkService.swift; sourceTree = "<group>"; };
+		8B3A88B579936388678CE3EA /* PromptTemplateManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PromptTemplateManager.swift; path = RecordAnalyzer/Managers/PromptTemplateManager.swift; sourceTree = "<group>"; };
 		8FE90B4735CBA06CF7BAA3F7 /* LoginView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LoginView.swift; path = RecordAnalyzer/Views/Authentication/LoginView.swift; sourceTree = "<group>"; };
 		929B54721F25EF59754FAF3C /* GradientButton.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GradientButton.swift; path = RecordAnalyzer/Views/Components/GradientButton.swift; sourceTree = "<group>"; };
 		BC4098DF54F27191578A9DDD /* ProcessingStatusView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProcessingStatusView.swift; path = RecordAnalyzer/Views/Components/ProcessingStatusView.swift; sourceTree = "<group>"; };
@@ -93,6 +104,7 @@
 		CE55 /* MarkdownText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownText.swift; sourceTree = "<group>"; };
 		CFA7D8A44848E1A61A63D4D7 /* NotificationService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotificationService.swift; path = RecordAnalyzer/Services/NotificationService.swift; sourceTree = "<group>"; };
 		D2EF63FDE11E30EB66798573 /* AuthenticationManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AuthenticationManager.swift; path = RecordAnalyzer/Managers/AuthenticationManager.swift; sourceTree = "<group>"; };
+		D494C654A77B5D5E2148A78D /* PromptTemplate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PromptTemplate.swift; path = RecordAnalyzer/Models/PromptTemplate.swift; sourceTree = "<group>"; };
 		D59EF6B54EB69C21D9E9FBD2 /* Theme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Theme.swift; path = RecordAnalyzer/Models/Theme.swift; sourceTree = "<group>"; };
 		D6CBA5FDD624191646C446B0 /* AnimatedCardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AnimatedCardView.swift; path = RecordAnalyzer/Views/Components/AnimatedCardView.swift; sourceTree = "<group>"; };
 		D96D560BB58104D674BCF4B5 /* HomeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HomeView.swift; path = RecordAnalyzer/Views/Home/HomeView.swift; sourceTree = "<group>"; };
@@ -151,6 +163,12 @@
 				D6CBA5FDD624191646C446B0 /* AnimatedCardView.swift */,
 				7B1BB2714ADE0CCB8FF9900A /* NotificationManager.swift */,
 				BC4098DF54F27191578A9DDD /* ProcessingStatusView.swift */,
+				D494C654A77B5D5E2148A78D /* PromptTemplate.swift */,
+				769CD3B6883ECF8A07BC11A1 /* UploadDialogView.swift */,
+				6B8BF24576F9035F2F0F7A4B /* PromptTemplateSelector.swift */,
+				555EAC66B30099C58F24DAC6 /* PromptTemplateEditView.swift */,
+				31B857E05156EDF4DB685518 /* PromptTemplateListView.swift */,
+				8B3A88B579936388678CE3EA /* PromptTemplateManager.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -380,6 +398,12 @@
 				B85964D000F46373B59508F9 /* AnimatedCardView.swift in Sources */,
 				60E13C8BCA1EAFCD9A368D70 /* NotificationManager.swift in Sources */,
 				785D73A7B1F4FF5741B7E1EE /* ProcessingStatusView.swift in Sources */,
+				8F3826EDBBC7782B9A49B5C7 /* PromptTemplate.swift in Sources */,
+				83BC7CCC7A97ACD7887AB073 /* UploadDialogView.swift in Sources */,
+				CF21ECFEBF245E596E9D0595 /* PromptTemplateSelector.swift in Sources */,
+				2010AD3F1ADF86C8F3829A8B /* PromptTemplateEditView.swift in Sources */,
+				1FE67AD52BDB59141D04FB78 /* PromptTemplateListView.swift in Sources */,
+				52B4664E671E60F247BC9713 /* PromptTemplateManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
