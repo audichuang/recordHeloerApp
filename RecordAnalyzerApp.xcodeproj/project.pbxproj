@@ -19,6 +19,7 @@
 		713A757A0CA06E85620571CD /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D96D560BB58104D674BCF4B5 /* HomeView.swift */; };
 		7180BB74EF8A6642FEA53C81 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4917F2FFCC5056779716A4C9 /* RegisterView.swift */; };
 		760120E652109B122D98D9DA /* CardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75CD83C433828362F72DC83E /* CardView.swift */; };
+		785D73A7B1F4FF5741B7E1EE /* ProcessingStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC4098DF54F27191578A9DDD /* ProcessingStatusView.swift */; };
 		8070BC749AFAA4A14D8BF186 /* RegenerateButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FDE5221AD36AD97C1F1F67B /* RegenerateButton.swift */; };
 		859FD6BA179833D2BD70CDC3 /* GradientText.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0B7F0A108E83268BCB9E52 /* GradientText.swift */; };
 		8A03487E2DE725B000E780E2 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A03487D2DE725B000E780E2 /* Theme.swift */; };
@@ -73,6 +74,7 @@
 		8A816D0E2DE597ED00F22D75 /* NetworkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkService.swift; sourceTree = "<group>"; };
 		8FE90B4735CBA06CF7BAA3F7 /* LoginView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LoginView.swift; path = RecordAnalyzer/Views/Authentication/LoginView.swift; sourceTree = "<group>"; };
 		929B54721F25EF59754FAF3C /* GradientButton.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GradientButton.swift; path = RecordAnalyzer/Views/Components/GradientButton.swift; sourceTree = "<group>"; };
+		BC4098DF54F27191578A9DDD /* ProcessingStatusView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProcessingStatusView.swift; path = RecordAnalyzer/Views/Components/ProcessingStatusView.swift; sourceTree = "<group>"; };
 		CE02 /* RecordAnalyzerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordAnalyzerApp.swift; sourceTree = "<group>"; };
 		CE04 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		CE06 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -148,6 +150,7 @@
 				73D7E0A9ABD1DC29C16CD77D /* AudioPlayerManager.swift */,
 				D6CBA5FDD624191646C446B0 /* AnimatedCardView.swift */,
 				7B1BB2714ADE0CCB8FF9900A /* NotificationManager.swift */,
+				BC4098DF54F27191578A9DDD /* ProcessingStatusView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -376,6 +379,7 @@
 				ADF9179789570C0F2C4CF814 /* AudioPlayerManager.swift in Sources */,
 				B85964D000F46373B59508F9 /* AnimatedCardView.swift in Sources */,
 				60E13C8BCA1EAFCD9A368D70 /* NotificationManager.swift in Sources */,
+				785D73A7B1F4FF5741B7E1EE /* ProcessingStatusView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -24,7 +24,7 @@ class NotificationManager: NSObject, ObservableObject {
             
             if granted {
                 print("🔔 註冊遠端通知...")
-                await UIApplication.shared.registerForRemoteNotifications()
+                UIApplication.shared.registerForRemoteNotifications()
             } else {
                 print("❌ 通知權限被拒絕，無法接收推送通知")
             }
@@ -49,7 +49,7 @@ class NotificationManager: NSObject, ObservableObject {
             // 如果已授權但沒有設備 token，重新註冊
             if deviceToken == nil {
                 print("🔔 重新註冊遠端通知...")
-                await UIApplication.shared.registerForRemoteNotifications()
+                UIApplication.shared.registerForRemoteNotifications()
             }
         }
     }
@@ -174,6 +174,11 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
         // 當 App 在前景時也顯示通知
+        let userInfo = notification.request.content.userInfo
+        
+        // 處理推送通知數據
+        await handleRemoteNotification(userInfo: userInfo)
+        
         return [.banner, .sound, .badge]
     }
     
@@ -198,26 +203,74 @@ extension NotificationManager: UNUserNotificationCenterDelegate {
     
     func handleRemoteNotification(userInfo: [AnyHashable: Any]) async {
         // 處理遠端推送通知
-        guard let type = userInfo["type"] as? String else { return }
+        print("🔔 收到遠端推送通知: \(userInfo)")
         
-        switch type {
-        case "recording_completed":
-            if let recordingId = userInfo["recordingId"] as? String,
-               let status = userInfo["status"] as? String {
-                // 發送通知給 RecordingManager 更新狀態
-                await MainActor.run {
-                    NotificationCenter.default.post(
-                        name: Notification.Name("RecordingProcessingCompleted"),
-                        object: nil,
-                        userInfo: [
-                            "recordingId": recordingId,
-                            "status": status
-                        ]
-                    )
+        // 檢查各種可能的通知類型格式
+        let apsDict = userInfo["aps"] as? [String: Any]
+        
+        let type = userInfo["type"] as? String ?? 
+                   userInfo["notification_type"] as? String ??
+                   apsDict?["type"] as? String
+        
+        let recordingId = userInfo["recordingId"] as? String ??
+                          userInfo["recording_id"] as? String ??
+                          apsDict?["recordingId"] as? String ??
+                          apsDict?["recording_id"] as? String
+        
+        let status = userInfo["status"] as? String ??
+                     apsDict?["status"] as? String
+        
+        print("🔔 解析推送通知 - Type: \(type ?? "nil"), RecordingId: \(recordingId ?? "nil"), Status: \(status ?? "nil")")
+        
+        // 處理不同類型的通知
+        if let recordingId = recordingId {
+            var finalStatus = status ?? "completed"
+            
+            // 根據通知類型判斷狀態
+            switch type {
+            case "transcription_completed":
+                finalStatus = "transcribed"
+            case "summary_completed", "recording_completed":
+                finalStatus = "completed"
+            case "regeneration_completed":
+                finalStatus = "completed"
+            case "processing_failed", "regeneration_failed":
+                finalStatus = "failed"
+            default:
+                // 如果沒有明確的類型，嘗試從標題推斷
+                if let apsDict = apsDict {
+                    // alert 可能是字符串或字典
+                    var alertBody: String?
+                    if let alertString = apsDict["alert"] as? String {
+                        alertBody = alertString
+                    } else if let alertDict = apsDict["alert"] as? [String: Any] {
+                        alertBody = alertDict["body"] as? String ?? alertDict["title"] as? String
+                    }
+                    
+                    if let body = alertBody {
+                        if body.contains("逐字稿處理完成") || body.contains("逐字稿已生成") {
+                            finalStatus = "transcribed"
+                        } else if body.contains("摘要處理完成") || body.contains("全部完成") {
+                            finalStatus = "completed"
+                        } else if body.contains("錄音處理完成") {
+                            finalStatus = "completed"
+                        }
+                    }
                 }
             }
-        default:
-            break
+            
+            // 發送通知給 RecordingManager 更新狀態
+            await MainActor.run {
+                print("🔔 發送本地通知更新錄音狀態: recordingId=\(recordingId), status=\(finalStatus)")
+                NotificationCenter.default.post(
+                    name: Notification.Name("RecordingProcessingCompleted"),
+                    object: nil,
+                    userInfo: [
+                        "recordingId": recordingId,
+                        "status": finalStatus
+                    ]
+                )
+            }
         }
     }
 }

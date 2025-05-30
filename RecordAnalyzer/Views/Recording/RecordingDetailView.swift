@@ -607,10 +607,17 @@ struct RecordingDetailView: View {
                     Spacer()
                     
                     // 狀態指示器
-                    StatusIndicator(
-                        status: detailRecording.status ?? "unknown",
-                        isLoading: isLoadingDetail
-                    )
+                    if let status = detailRecording.status, 
+                       ["uploading", "transcribing", "transcribed", "summarizing"].contains(status.lowercased()) {
+                        ProcessingStatusView(status: status)
+                            .scaleEffect(0.7)
+                            .frame(width: 120, height: 120)
+                    } else {
+                        StatusIndicator(
+                            status: detailRecording.status ?? "unknown",
+                            isLoading: isLoadingDetail
+                        )
+                    }
                 }
             }
             
@@ -1380,6 +1387,10 @@ struct StatusIndicator: View {
         switch status.lowercased() {
         case "completed": return "checkmark.circle.fill"
         case "processing": return "gear"
+        case "transcribing": return "waveform"
+        case "transcribed": return "text.alignleft"
+        case "summarizing": return "text.badge.checkmark"
+        case "uploading": return "arrow.up.circle"
         case "failed": return "exclamationmark.triangle.fill"
         case "pending": return "clock.fill"
         default: return "questionmark.circle.fill"
@@ -1389,7 +1400,8 @@ struct StatusIndicator: View {
     private var statusColor: Color {
         switch status.lowercased() {
         case "completed": return AppTheme.Colors.success
-        case "processing": return AppTheme.Colors.warning
+        case "processing", "transcribing", "summarizing", "uploading": return AppTheme.Colors.warning
+        case "transcribed": return AppTheme.Colors.info
         case "failed": return AppTheme.Colors.error
         case "pending": return AppTheme.Colors.info
         default: return AppTheme.Colors.textSecondary
@@ -1400,6 +1412,10 @@ struct StatusIndicator: View {
         switch status.lowercased() {
         case "completed": return "已完成"
         case "processing": return "處理中"
+        case "transcribing": return "轉錄中"
+        case "transcribed": return "逐字稿完成"
+        case "summarizing": return "摘要處理中"
+        case "uploading": return "上傳中"
         case "failed": return "失敗"
         case "pending": return "等待中"
         default: return "未知"

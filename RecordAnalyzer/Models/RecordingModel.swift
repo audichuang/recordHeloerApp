@@ -159,10 +159,18 @@ struct RecordingSummary: Identifiable, Codable, Equatable, Sendable {
             return "已完成"
         case "processing":
             return "處理中"
+        case "transcribing":
+            return "轉錄中"
+        case "transcribed":
+            return "逐字稿完成"
+        case "summarizing":
+            return "摘要處理中"
         case "failed":
             return "失敗"
         case "pending":
             return "等待中"
+        case "uploading":
+            return "上傳中"
         default:
             return status
         }
@@ -384,10 +392,18 @@ struct Recording: Identifiable, Codable, Equatable, Sendable {
             return "已完成"
         case "processing":
             return "處理中"
+        case "transcribing":
+            return "轉錄中"
+        case "transcribed":
+            return "逐字稿完成"
+        case "summarizing":
+            return "摘要處理中"
         case "failed":
             return "失敗"
         case "pending":
             return "等待中"
+        case "uploading":
+            return "上傳中"
         default:
             return status
         }

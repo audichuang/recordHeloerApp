@@ -48,8 +48,10 @@ struct RecordingRowView: View {
                         }
                         
                         // 狀態標籤
-                        if recording.status == "processing" {
-                            statusBadge
+                        if let status = recording.status, 
+                           ["processing", "uploading", "transcribing", "transcribed", "summarizing"].contains(status.lowercased()) {
+                            ProcessingStatusBadge(status: status)
+                                .scaleEffect(0.9)
                         }
                     }
                 }
@@ -91,7 +93,8 @@ struct RecordingRowView: View {
                 .fill(statusColor.opacity(0.1))
                 .frame(width: 40, height: 40)
             
-            if recording.status == "processing" {
+            if let status = recording.status,
+               ["processing", "uploading", "transcribing", "summarizing"].contains(status.lowercased()) {
                 // 處理中動畫
                 Circle()
                     .trim(from: 0, to: 0.7)
@@ -113,39 +116,66 @@ struct RecordingRowView: View {
     
     // MARK: - 狀態標籤
     private var statusBadge: some View {
-        Text("處理中")
+        Text(statusBadgeText)
             .font(.system(size: 10, weight: .medium))
-            .foregroundColor(AppTheme.Colors.warning)
+            .foregroundColor(statusBadgeColor)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background(
                 Capsule()
-                    .fill(AppTheme.Colors.warning.opacity(0.1))
+                    .fill(statusBadgeColor.opacity(0.1))
             )
+    }
+    
+    private var statusBadgeText: String {
+        switch recording.status?.lowercased() {
+        case "processing": return "處理中"
+        case "uploading": return "上傳中"
+        case "transcribing": return "轉錄中"
+        case "summarizing": return "生成摘要"
+        default: return "處理中"
+        }
+    }
+    
+    private var statusBadgeColor: Color {
+        switch recording.status?.lowercased() {
+        case "transcribing", "summarizing": return AppTheme.Colors.info
+        default: return AppTheme.Colors.warning
+        }
     }
     
     // MARK: - 計算屬性
     private var statusIcon: String {
-        switch recording.status {
+        switch recording.status?.lowercased() {
         case "completed":
             return "checkmark"
         case "failed":
             return "exclamationmark"
         case "processing":
             return "arrow.triangle.2.circlepath"
+        case "uploading":
+            return "arrow.up"
+        case "transcribing":
+            return "waveform"
+        case "transcribed":
+            return "text.alignleft"
+        case "summarizing":
+            return "text.badge.checkmark"
         default:
             return "circle"
         }
     }
     
     private var statusColor: Color {
-        switch recording.status {
+        switch recording.status?.lowercased() {
         case "completed":
             return AppTheme.Colors.success
         case "failed":
             return AppTheme.Colors.error
-        case "processing":
+        case "processing", "uploading", "transcribing", "summarizing":
             return AppTheme.Colors.warning
+        case "transcribed":
+            return AppTheme.Colors.info
         default:
             return AppTheme.Colors.textTertiary
         }

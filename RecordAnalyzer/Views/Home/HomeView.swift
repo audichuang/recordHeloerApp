@@ -260,10 +260,10 @@ struct HomeView: View {
                     
                     Spacer()
                     
-                    // 箭頭
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundColor(AppTheme.Colors.textTertiary)
+                    // 狀態標籤
+                    if let status = recording.status {
+                        ProcessingStatusBadge(status: status)
+                    }
                 }
             }
         }
@@ -281,9 +281,17 @@ struct HomeView: View {
         }
         
         private var statusIconName: String {
-            switch recording.status {
+            switch recording.status?.lowercased() {
             case "processing":
                 return "arrow.triangle.2.circlepath"
+            case "uploading":
+                return "arrow.up.circle"
+            case "transcribing":
+                return "waveform.circle"
+            case "transcribed":
+                return "text.alignleft"
+            case "summarizing":
+                return "text.badge.checkmark"
             case "completed":
                 return "checkmark.circle.fill"
             case "failed":
@@ -294,9 +302,11 @@ struct HomeView: View {
         }
         
         private var statusColor: Color {
-            switch recording.status {
-            case "processing":
+            switch recording.status?.lowercased() {
+            case "processing", "uploading", "transcribing", "summarizing":
                 return AppTheme.Colors.warning
+            case "transcribed":
+                return AppTheme.Colors.info
             case "completed":
                 return AppTheme.Colors.success
             case "failed":

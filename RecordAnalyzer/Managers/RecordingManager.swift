@@ -54,33 +54,87 @@ class RecordingManager: ObservableObject {
     
     /// 更新錄音狀態（由推送通知觸發）
     func updateRecordingStatus(recordingId: String, status: String) async {
-        guard let uuid = UUID(uuidString: recordingId) else { return }
+        guard let uuid = UUID(uuidString: recordingId) else { 
+            print("❌ 無效的錄音 ID: \(recordingId)")
+            return 
+        }
+        
+        print("📱 更新錄音狀態: ID=\(recordingId), 新狀態=\(status)")
         
         // 更新本地列表中的狀態
         if let index = recordings.firstIndex(where: { $0.id == uuid }) {
-            recordings[index].status = status
+            // 創建新的錄音對象以確保觸發 SwiftUI 更新
+            var updatedRecording = recordings[index]
+            updatedRecording.status = status
+            recordings[index] = updatedRecording
+            print("✅ 已更新 recordings 列表中的狀態")
             
-            // 如果狀態是完成，重新加載詳細信息
-            if status.lowercased() == "completed" {
+            // 根據不同狀態更新其他屬性
+            switch status.lowercased() {
+            case "transcribed":
+                // 逐字稿完成，重新加載以獲取逐字稿內容
                 do {
                     let detailedRecording = try await networkService.getRecording(id: uuid)
                     recordings[index] = detailedRecording
+                    print("✅ 已加載逐字稿內容")
+                    // 確保通知 UI 更新
+                    await MainActor.run {
+                        self.objectWillChange.send()
+                    }
                 } catch {
                     print("❌ 無法加載錄音詳情: \(error)")
                 }
+                
+            case "completed":
+                // 全部完成，重新加載詳細信息
+                do {
+                    let detailedRecording = try await networkService.getRecording(id: uuid)
+                    recordings[index] = detailedRecording
+                    print("✅ 已加載完整錄音詳情")
+                    // 確保通知 UI 更新
+                    await MainActor.run {
+                        self.objectWillChange.send()
+                    }
+                } catch {
+                    print("❌ 無法加載錄音詳情: \(error)")
+                }
+                
+            default:
+                // 其他狀態也發送更新通知
+                await MainActor.run {
+                    self.objectWillChange.send()
+                }
+                break
             }
+        } else {
+            print("⚠️ 在 recordings 列表中找不到錄音 ID: \(recordingId)")
         }
         
         // 也更新摘要列表
         if let index = recordingSummaries.firstIndex(where: { $0.id == uuid }) {
             var summary = recordingSummaries[index]
             summary.status = status
-            if status.lowercased() == "completed" {
+            
+            // 根據狀態更新標誌
+            switch status.lowercased() {
+            case "transcribed":
+                summary.hasTranscript = true
+                summary.hasSummary = false
+            case "completed":
                 summary.hasTranscript = true
                 summary.hasSummary = true
+            default:
+                break
             }
+            
             recordingSummaries[index] = summary
+            print("✅ 已更新 recordingSummaries 列表中的狀態")
+        } else {
+            print("⚠️ 在 recordingSummaries 列表中找不到錄音 ID: \(recordingId)")
         }
+        
+        // 通知 UI 更新
+        objectWillChange.send()
     }
     
     
@@ -134,15 +188,22 @@ class RecordingManager: ObservableObject {
                 }
             )
             
-            // 確保錄音狀態為處理中
+            // 使用後端返回的狀態
             var newRecording = uploadedRecording
-            if newRecording.status == nil || !["processing", "uploading"].contains(newRecording.status!.lowercased()) {
-                newRecording.status = "processing"
+            // 後端返回 processing，我們可以將其視為 transcribing 的開始
+            if newRecording.status == "processing" {
+                newRecording.status = "transcribing"
+            } else if newRecording.status == nil {
+                newRecording.status = "uploading"
             }
             
             print("✅ 上傳成功，錄音狀態: \(newRecording.status ?? "unknown")")
             
+            // 立即添加到列表
             recordings.insert(newRecording, at: 0)
+            
+            print("✅ 已添加到本地列表")
+            
             await dataStore.saveRecording(newRecording)
             
             // 不再需要輪詢，等待推送通知
